@@ -25,7 +25,7 @@ El material de la fase está en [`fase-0/`](fase-0/):
 - **Fase actual y qué falta:** la issue abierta con etiqueta `seguimiento` de número más bajo, con su lista de entregables y sub-issues.
 - **Qué se decidió y por qué:** [`BITACORA.md`](BITACORA.md), una entrada por sesión.
 - **Diario corto:** la issue [Diario de desarrollo](../../issues/8), un comentario por sesión.
-- **Hitos:** una etiqueta de git por puerta de decisión superada (`fase-0-inicio`, `fase-0-cerrada`, ...).
+- **Hitos:** cada fase se cierra cerrando su issue con el resultado de la puerta de decisión escrito en ella. Las issues cerradas con etiqueta `seguimiento` son el historial de hitos.
 
 ## Pilares
 

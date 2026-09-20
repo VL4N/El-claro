@@ -17,6 +17,7 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 - Se creó este repositorio, separado del mod de Project Zomboid donde nació la conversación.
 - Se preparó todo el material de la fase 0: reglas en una página, tablero imprimible en cinco estados, plantilla de registro y scripts de verificación.
 - Se montó el seguimiento en GitHub: una issue por fase con entregables y puerta de decisión, sub-issues por partida para la fase 0, y la issue de diario.
+- Se intentó marcar hitos con etiquetas de git, pero el entorno de trabajo no permite subirlas. Los hitos quedan registrados como issues de fase cerradas.
 
 **Decidido**
 
