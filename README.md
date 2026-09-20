@@ -20,6 +20,13 @@ El material de la fase está en [`fase-0/`](fase-0/):
 - [docs/01-mapeo-del-juego.md](docs/01-mapeo-del-juego.md): concepto, pilares, sistemas y cómo se conectan entre sí.
 - [docs/02-ruta-de-desarrollo.md](docs/02-ruta-de-desarrollo.md): fases, alcance de cada una, puertas de decisión y riesgos.
 
+## Cómo seguir el avance
+
+- **Fase actual y qué falta:** la issue abierta con etiqueta `seguimiento` de número más bajo, con su lista de entregables y sub-issues.
+- **Qué se decidió y por qué:** [`BITACORA.md`](BITACORA.md), una entrada por sesión.
+- **Diario corto:** la issue [Diario de desarrollo](../../issues/8), un comentario por sesión.
+- **Hitos:** una etiqueta de git por puerta de decisión superada (`fase-0-inicio`, `fase-0-cerrada`, ...).
+
 ## Pilares
 
 1. El laberinto se aprende.
