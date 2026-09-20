@@ -6,7 +6,14 @@ Juego de estrategia por turnos. Administras una pequeña ciudad encerrada en el 
 
 ## Estado
 
-Fase 0: prototipo de papel. Todavía no hay código.
+Fase 0: prototipo de papel. Todavía no hay código del juego.
+
+El material de la fase está en [`fase-0/`](fase-0/):
+
+- [`reglas.md`](fase-0/reglas.md): las reglas del prototipo en una página.
+- [`tablero.html`](fase-0/tablero.html): los cinco estados del tablero, listos para imprimir. Ábrelo en el navegador e imprímelo.
+- [`registro-de-partida.md`](fase-0/registro-de-partida.md): plantilla para anotar cada partida. La meta es juntar cinco.
+- [`herramientas/`](fase-0/herramientas/): scripts para verificar que el tablero sea jugable y para regenerar el HTML.
 
 ## Documentos
 
