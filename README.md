@@ -10,6 +10,10 @@ Fase 1: prototipo mínimo jugable en el navegador, en `juego/`. La fase 0 (papel
 
 **Jugar:** cuando GitHub Pages esté activado, el juego vive en `https://vl4n.github.io/El-claro/`. Mientras tanto, se puede abrir `juego/index.html` sirviendo la carpeta con cualquier servidor estático.
 
+**Instalar como aplicación:** abre el juego en el celular y elige "Agregar a pantalla de inicio" (Android: menú del navegador; iPhone: botón de compartir). Queda con icono, a pantalla completa y funciona sin conexión.
+
+**Versión en un solo archivo:** `python3 juego/herramientas-empaquetar.py` genera `juego/el-claro.html` con el motor incrustado, para compartir o abrir sin servidor.
+
 **Probar el motor:**
 
 ```

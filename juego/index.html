@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>El Claro</title>
 <meta name="description" content="Prototipo de la fase 1: una ciudad encerrada en un laberinto que gira.">
+<meta name="theme-color" content="#221f1b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="El Claro">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png">
 <style>
   :root {
     --papel: #f5efe4; --tinta: #221f1b; --suave: #6b6257; --borde: #d8cfc0;
@@ -12,9 +20,21 @@
     --salida: #4f9a5e; --escombros: #b9b1a3; --marca: #5f82c2; --acento: #b4532a;
     --tarjeta: #fbf8f2;
   }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --papel: #1d1a16; --tinta: #efe7d8; --suave: #a79d8e; --borde: #3a342c;
+    --pared: #0c0b09; --corredor: #2a2620; --movil: #35302a; --ciudad: #c9952f;
+    --salida: #4f9a5e; --escombros: #6e675c; --marca: #5f82c2; --acento: #e0744a;
+    --tarjeta: #262219; color-scheme: dark;
+  } }
+  :root[data-theme="dark"] {
+    --papel: #1d1a16; --tinta: #efe7d8; --suave: #a79d8e; --borde: #3a342c;
+    --pared: #0c0b09; --corredor: #2a2620; --movil: #35302a; --ciudad: #c9952f;
+    --salida: #4f9a5e; --escombros: #6e675c; --marca: #5f82c2; --acento: #e0744a;
+    --tarjeta: #262219; color-scheme: dark;
+  }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--papel); color: var(--tinta); font-family: Georgia, "Times New Roman", serif; }
-  body { padding: 12px 16px 32px; max-width: 520px; margin: 0 auto; }
+  body { padding-block: 12px 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 520px; margin: 0 auto; }
   header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
   .tiempo { display: flex; align-items: center; gap: 6px; }
   .tiempo button { padding: 6px 10px; font-size: 13px; }
@@ -37,7 +57,8 @@
   .tarjeta.perdido, .tarjeta.salio { opacity: .55; }
   .acciones { margin-top: 10px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 10px; min-height: 48px; }
   .acciones .fila { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  button { font-family: inherit; font-size: 14px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--tinta); background: #fff; color: var(--tinta); cursor: pointer; }
+  button { font-family: inherit; font-size: 14px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--tinta); background: var(--tarjeta); color: var(--tinta); cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
   button:disabled { opacity: .4; cursor: default; }
   button.primario { background: var(--tinta); color: var(--papel); }
   button.grande { width: 100%; padding: 14px; font-size: 17px; margin-top: 12px; }
@@ -154,7 +175,7 @@ function dibujar() {
     else if (ch === "K") color = css("--marca");
     ctx.fillStyle = color;
     ctx.fillRect(x * TAM, y * TAM, TAM, TAM);
-    ctx.strokeStyle = "rgba(34,31,27,.18)";
+    ctx.strokeStyle = css("--borde");
     ctx.strokeRect(x * TAM + .5, y * TAM + .5, TAM - 1, TAM - 1);
     if (ch === "M" || ch === "K" || ch === "S") {
       ctx.fillStyle = ch === "M" ? css("--tinta") : "#fff";
@@ -164,7 +185,7 @@ function dibujar() {
     }
   }
   // flechas de giro
-  ctx.fillStyle = "rgba(34,31,27,.35)";
+  ctx.fillStyle = css("--suave");
   ctx.font = `${TAM * .55}px Georgia`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
   for (const y of M.FILAS_MOVILES) {
     const der = y < 7;
@@ -193,7 +214,7 @@ function dibujar() {
     ctx.beginPath(); ctx.arc(cx, cy, TAM * .36, 0, Math.PI * 2);
     ctx.fillStyle = seleccion === k.id ? css("--acento") : css("--tinta");
     ctx.fill();
-    ctx.fillStyle = "#fff"; ctx.font = `bold ${TAM * .45}px Georgia`;
+    ctx.fillStyle = css("--papel"); ctx.font = `bold ${TAM * .45}px Georgia`;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
     ctx.fillText(k.nombre[0], cx, cy + 1);
   }
@@ -320,6 +341,15 @@ nueva = function (semilla) { finGuardado = false; _nueva(semilla); };
 
 const param = new URLSearchParams(location.search).get("semilla");
 nueva(param ? +param : undefined);
+
+// Aplicación instalable: el trabajador de servicio guarda el juego para abrirlo sin conexión.
+// Si el entorno no lo permite (por ejemplo, una página incrustada), el juego funciona igual.
+try {
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  }
+} catch {}
+try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => dibujar()); } catch {}
 </script>
 </body>
 </html>

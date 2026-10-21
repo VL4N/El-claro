@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>El Claro</title>
+<meta name="description" content="Prototipo de la fase 1: una ciudad encerrada en un laberinto que gira.">
+<meta name="theme-color" content="#221f1b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="El Claro">
+<link rel="icon" href="icono-192.png">
+<link rel="apple-touch-icon" href="icono-192.png">
+<style>
+  :root {
+    --papel: #f5efe4; --tinta: #221f1b; --suave: #6b6257; --borde: #d8cfc0;
+    --pared: #2b2723; --corredor: #fffdf8; --movil: #ebe2d1; --ciudad: #d9a441;
+    --salida: #4f9a5e; --escombros: #b9b1a3; --marca: #5f82c2; --acento: #b4532a;
+    --tarjeta: #fbf8f2;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --papel: #1d1a16; --tinta: #efe7d8; --suave: #a79d8e; --borde: #3a342c;
+    --pared: #0c0b09; --corredor: #2a2620; --movil: #35302a; --ciudad: #c9952f;
+    --salida: #4f9a5e; --escombros: #6e675c; --marca: #5f82c2; --acento: #e0744a;
+    --tarjeta: #262219; color-scheme: dark;
+  } }
+  :root[data-theme="dark"] {
+    --papel: #1d1a16; --tinta: #efe7d8; --suave: #a79d8e; --borde: #3a342c;
+    --pared: #0c0b09; --corredor: #2a2620; --movil: #35302a; --ciudad: #c9952f;
+    --salida: #4f9a5e; --escombros: #6e675c; --marca: #5f82c2; --acento: #e0744a;
+    --tarjeta: #262219; color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--papel); color: var(--tinta); font-family: Georgia, "Times New Roman", serif; }
+  body { padding-block: 12px 32px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); max-width: 520px; margin: 0 auto; }
+  header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
+  .tiempo { display: flex; align-items: center; gap: 6px; }
+  .tiempo button { padding: 6px 10px; font-size: 13px; }
+  .tiempo button.activo { background: var(--tinta); color: var(--papel); }
+  #reloj { font-size: 13px; color: var(--suave); min-width: 120px; text-align: right; }
+  #btnPausa { min-width: 72px; }
+  h1 { font-size: 22px; margin: 0; }
+  #turno { font-size: 14px; color: var(--suave); }
+  .recursos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+  .recurso { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 6px 8px; }
+  .recurso b { display: block; font-size: 20px; }
+  .recurso span { font-size: 12px; color: var(--suave); }
+  .recurso button { margin-top: 4px; width: 100%; font-size: 12px; padding: 4px; }
+  canvas { display: block; width: 100%; touch-action: manipulation; border: 1px solid var(--borde); border-radius: 6px; background: var(--corredor); }
+  .pista { font-size: 13px; color: var(--suave); margin: 6px 0 10px; min-height: 18px; }
+  .corredores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tarjeta { background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 8px; padding: 6px 8px; font-size: 13px; cursor: pointer; }
+  .tarjeta.sel { border-color: var(--acento); }
+  .tarjeta b { display: block; font-size: 15px; }
+  .tarjeta.perdido, .tarjeta.salio { opacity: .55; }
+  .acciones { margin-top: 10px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 10px; min-height: 48px; }
+  .acciones .fila { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  button { font-family: inherit; font-size: 14px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--tinta); background: var(--tarjeta); color: var(--tinta); cursor: pointer; }
+  button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+  button:disabled { opacity: .4; cursor: default; }
+  button.primario { background: var(--tinta); color: var(--papel); }
+  button.grande { width: 100%; padding: 14px; font-size: 17px; margin-top: 12px; }
+  .stepper { display: inline-flex; align-items: center; border: 1px solid var(--tinta); border-radius: 8px; overflow: hidden; }
+  .stepper button { border: 0; border-radius: 0; padding: 8px 12px; }
+  .stepper span { padding: 0 10px; min-width: 70px; text-align: center; font-size: 14px; }
+  .registro { margin-top: 14px; font-size: 13px; line-height: 1.45; border-top: 1px solid var(--borde); padding-top: 8px; }
+  .registro p { margin: 0 0 4px; }
+  .registro p:first-child { font-weight: bold; }
+  .leyenda { font-size: 12px; color: var(--suave); margin-top: 14px; line-height: 1.5; }
+  #fin { position: fixed; inset: 0; background: rgba(34,31,27,.75); display: none; align-items: center; justify-content: center; padding: 16px; }
+  #fin .caja { background: var(--papel); border-radius: 12px; padding: 20px; max-width: 360px; width: 100%; }
+  #fin h2 { margin: 0 0 8px; }
+  #fin p { margin: 0 0 10px; }
+  .pie { font-size: 12px; color: var(--suave); margin-top: 18px; }
+  .pie a { color: inherit; }
+</style>
+</head>
+<body>
+<header>
+  <h1>El Claro</h1>
+  <div class="tiempo">
+    <span id="reloj"></span>
+    <button id="btnPausa" class="primario">Jugar</button>
+    <button id="btnVel" title="velocidad">×1</button>
+  </div>
+</header>
+
+<div class="recursos">
+  <div class="recurso"><b id="comida">0</b><span>comida</span></div>
+  <div class="recurso"><b id="materiales">0</b><span>materiales</span><button id="btnHuerto"></button></div>
+  <div class="recurso"><b id="conocimiento">0</b><span>conocimiento</span><button id="btnTaller"></button></div>
+</div>
+
+<canvas id="tablero" width="600" height="600"></canvas>
+<div class="pista" id="pista"></div>
+
+<div class="corredores" id="corredores"></div>
+<div class="acciones" id="acciones"></div>
+
+
+<div class="registro" id="registro"></div>
+
+<div class="leyenda">
+  <b>Cómo se juega.</b> Todo pasa a la vez: pulsa Jugar y el tiempo corre. Puedes pausar cuando quieras para pensar. Toca un corredor y luego una celda para darle destino. En la ciudad elige cuántas raciones lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. Las filas sombreadas giran cada 36 segundos: las del norte a la derecha, las del sur a la izquierda. Los escombros (M) dan materiales, las marcas (K) conocimiento. Con 4 materiales se construye un huerto; con 5, el taller. Gana quien cruza la salida (S) antes de que se acabe el tiempo (6 minutos).
+</div>
+<div class="pie">Prototipo de la fase 1, tiempo real. Semilla <span id="semilla"></span>. <a href="#" id="btnNueva">Nueva partida</a> · <a href="#" id="btnCopiar">Copiar registro de partidas</a></div>
+
+<div id="fin"><div class="caja">
+  <h2 id="finTitulo"></h2>
+  <p id="finMotivo"></p>
+  <p id="finPuntos"></p>
+  <button class="primario" id="btnOtra">Otra partida</button>
+</div></div>
+
+<script>
+const M = (() => {
+// Motor de El Claro, fase 1. Lógica pura: cada función recibe un estado y devuelve uno nuevo.
+// No toca el DOM. Se prueba con node y se usa desde index.html.
+
+const ANCHO = 15;
+const ALTO = 15;
+// El tiempo avanza en "ticks" (un segundo de juego a velocidad normal).
+const TICK_ECONOMIA = 6;    // cada cuántos ticks la ciudad produce y consume, y los corredores gastan una ración
+const CICLO = 36;           // cada cuántos ticks gira el laberinto
+const TURNOS_MAX = 360;     // duración de la partida en ticks
+const CAPACIDAD = 3;        // materiales que carga un corredor
+const COSTO_HUERTO = 4;
+const COSTO_TALLER = 5;
+const COSTO_ATAJO = 2;      // conocimiento para atravesar una pared
+const PUNTOS_SALIDA = 10;
+
+const NOMBRES = ["Ira", "Teo", "Noa"];
+const FILAS_DERECHA = [1, 3, 5];     // filas (base 0) que giran a la derecha: mitad norte
+const FILAS_IZQUIERDA = [9, 11, 13]; // filas que giran a la izquierda: mitad sur
+const FILAS_MOVILES = new Set([...FILAS_DERECHA, ...FILAS_IZQUIERDA]);
+
+// ---------- azar determinista ----------
+function crearRng(semilla) {
+  let a = semilla >>> 0;
+  return function () {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ---------- celdas ----------
+const esCiudad = (x, y) => x >= 6 && x <= 8 && y >= 6 && y <= 8;
+const enTablero = (x, y) => x >= 0 && x < ANCHO && y >= 0 && y < ALTO;
+const celda = (mapa, x, y) => mapa[y][x];
+const pasable = (mapa, x, y) => enTablero(x, y) && mapa[y][x] !== "#";
+
+function ponerCelda(mapa, x, y, ch) {
+  const fila = mapa[y].split("");
+  fila[x] = ch;
+  const copia = mapa.slice();
+  copia[y] = fila.join("");
+  return copia;
+}
+
+// ---------- cambio del laberinto ----------
+function desplazarMapa(mapa) {
+  return mapa.map((fila, y) => {
+    if (FILAS_DERECHA.includes(y)) return fila[fila.length - 1] + fila.slice(0, -1);
+    if (FILAS_IZQUIERDA.includes(y)) return fila.slice(1) + fila[0];
+    return fila;
+  });
+}
+
+function desplazarCoord(x, y) {
+  if (FILAS_DERECHA.includes(y)) return { x: (x + 1) % ANCHO, y };
+  if (FILAS_IZQUIERDA.includes(y)) return { x: (x + ANCHO - 1) % ANCHO, y };
+  return { x, y };
+}
+
+// ---------- caminos ----------
+// BFS con hasta `paredes` celdas de pared permitidas. Devuelve lista de pasos (sin el origen) o null.
+function camino(mapa, desde, hasta, paredes = 0) {
+  const clave = (x, y, p) => (y * ANCHO + x) * 2 + p;
+  const previo = new Map();
+  const cola = [[desde.x, desde.y, 0]];
+  previo.set(clave(desde.x, desde.y, 0), null);
+  while (cola.length) {
+    const [x, y, p] = cola.shift();
+    if (x === hasta.x && y === hasta.y) {
+      const pasos = [];
+      let k = clave(x, y, p);
+      while (previo.get(k)) {
+        const [px, py, pp, cx, cy] = previo.get(k);
+        pasos.push({ x: cx, y: cy });
+        k = clave(px, py, pp);
+      }
+      return pasos.reverse();
+    }
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (!enTablero(nx, ny)) continue;
+      const muro = mapa[ny][nx] === "#";
+      const np = p + (muro ? 1 : 0);
+      if (np > paredes) continue;
+      const k = clave(nx, ny, np);
+      if (previo.has(k)) continue;
+      previo.set(k, [x, y, p, nx, ny]);
+      cola.push([nx, ny, np]);
+    }
+  }
+  return null;
+}
+
+function distancias(mapa, desde) {
+  const dist = new Map();
+  const cola = [desde];
+  dist.set(desde.y * ANCHO + desde.x, 0);
+  while (cola.length) {
+    const { x, y } = cola.shift();
+    const d = dist.get(y * ANCHO + x);
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy;
+      if (!pasable(mapa, nx, ny) || dist.has(ny * ANCHO + nx)) continue;
+      dist.set(ny * ANCHO + nx, d + 1);
+      cola.push({ x: nx, y: ny });
+    }
+  }
+  return dist;
+}
+
+function celdaCiudadMasCercana(mapa, desde) {
+  let mejor = null;
+  for (let y = 6; y <= 8; y++) for (let x = 6; x <= 8; x++) {
+    const c = camino(mapa, desde, { x, y });
+    if (c && (!mejor || c.length < mejor.pasos)) mejor = { x, y, pasos: c.length };
+  }
+  return mejor;
+}
+
+// ---------- generación ----------
+function mapaAleatorio(rng) {
+  const mapa = [];
+  for (let y = 0; y < ALTO; y++) {
+    let fila = "";
+    for (let x = 0; x < ANCHO; x++) {
+      if (esCiudad(x, y)) fila += "C";
+      else fila += rng() < 0.32 ? "#" : ".";
+    }
+    mapa.push(fila);
+  }
+  return mapa;
+}
+
+function colocar(mapa, rng, ch, cantidad, filtro) {
+  let m = mapa;
+  let intentos = 0;
+  while (cantidad > 0 && intentos < 2000) {
+    intentos++;
+    const x = Math.floor(rng() * ANCHO), y = Math.floor(rng() * ALTO);
+    if (m[y][x] !== "." || !filtro(x, y)) continue;
+    m = ponerCelda(m, x, y, ch);
+    cantidad--;
+  }
+  return m;
+}
+
+function evaluarMapa(mapa) {
+  const estados = [];
+  let m = mapa;
+  for (let i = 0; i <= Math.floor(TURNOS_MAX / CICLO); i++) {
+    estados.push(m);
+    m = desplazarMapa(m);
+  }
+  const origen = { x: 7, y: 7 };
+  const resumen = estados.map((e) => {
+    const dist = distancias(e, origen);
+    let salida = null;
+    const hallazgos = [];
+    for (let y = 0; y < ALTO; y++) for (let x = 0; x < ANCHO; x++) {
+      const ch = e[y][x];
+      if (ch === "S") salida = dist.get(y * ANCHO + x) ?? null;
+      if (ch === "M" || ch === "K") hallazgos.push(dist.has(y * ANCHO + x));
+    }
+    const abiertas = e.join("").split("").filter((c) => c !== "#").length;
+    return { alcanzables: dist.size, abiertas, salida, hallazgos };
+  });
+  const salidaAbierta = resumen.map((r) => r.salida !== null);
+  const ventanas = salidaAbierta.slice(1).filter(Boolean).length;
+  const distanciasOk = resumen.every((r) => r.salida === null || (r.salida >= 10 && r.salida <= 16));
+  const ciudadOk = resumen.every((r) => r.alcanzables >= r.abiertas * 0.6);
+  const n = resumen[0].hallazgos.length;
+  const hallazgosOk = Array.from({ length: n }, (_, i) => resumen.filter((r) => r.hallazgos[i]).length >= 3).every(Boolean);
+  const valido = !salidaAbierta[0] && ventanas >= 2 && ventanas <= 4 && distanciasOk && ciudadOk && hallazgosOk;
+  return { valido, salidaAbierta, resumen };
+}
+
+function generarMapa(semilla) {
+  const rng = crearRng(semilla);
+  for (let intento = 0; intento < 3000; intento++) {
+    let m = mapaAleatorio(rng);
+    // la salida va en un borde, lejos del centro
+    const lado = Math.floor(rng() * 4);
+    const k = 1 + Math.floor(rng() * (ANCHO - 2));
+    const [sx, sy] = [[k, 0], [k, ALTO - 1], [0, k], [ANCHO - 1, k]][lado];
+    if (m[sy][sx] === "#") m = ponerCelda(m, sx, sy, ".");
+    m = ponerCelda(m, sx, sy, "S");
+    const lejos = (x, y) => Math.abs(x - 7) + Math.abs(y - 7) >= 3;
+    m = colocar(m, rng, "M", 10, lejos);
+    m = colocar(m, rng, "K", 6, lejos);
+    if (evaluarMapa(m).valido) return { mapa: m, intentos: intento + 1 };
+  }
+  return null;
+}
+
+// ---------- estado ----------
+function nuevaPartida(semilla = Date.now() % 1000000) {
+  const gen = generarMapa(semilla);
+  if (!gen) throw new Error("No se pudo generar un mapa válido con la semilla " + semilla);
+  const corredores = NOMBRES.map((nombre, i) => ({
+    id: i, nombre, x: 6 + i, y: 7, raciones: 0, carga: 0, destino: null,
+    estado: "ciudad", atajo: false,
+  }));
+  return {
+    semilla, turno: 1, mapa: gen.mapa,
+    comida: 10, materiales: 0, conocimiento: 0, hambre: 0,
+    huertos: 0, taller: false,
+    corredores, salidaAlcanzada: false,
+    registro: [`El Claro despierta. Tres corredores esperan en la plaza.`],
+    fin: null,
+  };
+}
+
+const log = (s, texto) => ({ ...s, registro: [...s.registro, texto] });
+
+function velocidad(s) { return s.taller ? 2 : 1; }
+function produccion(s) { return 2 + 2 * s.huertos; }
+const CONSUMO = 2;
+
+// ---------- acciones del jugador (durante el turno) ----------
+function construir(s, que) {
+  if (s.fin) return s;
+  if (que === "huerto") {
+    if (s.materiales < COSTO_HUERTO) return s;
+    return log({ ...s, materiales: s.materiales - COSTO_HUERTO, huertos: s.huertos + 1 },
+      `Se construye un huerto. Producción: ${produccion(s) + 2} comida por turno.`);
+  }
+  if (que === "taller") {
+    if (s.taller || s.materiales < COSTO_TALLER) return s;
+    return log({ ...s, materiales: s.materiales - COSTO_TALLER, taller: true },
+      `Se construye el taller. Los corredores ahora se mueven 3 celdas por turno.`);
+  }
+  return s;
+}
+
+function enviar(s, id, destino, raciones) {
+  if (s.fin) return s;
+  const c = s.corredores[id];
+  if (c.estado !== "ciudad") return s;
+  if (!pasable(s.mapa, destino.x, destino.y) || celda(s.mapa, destino.x, destino.y) === "C") return s;
+  raciones = Math.max(1, Math.min(8, raciones | 0));
+  if (s.comida < raciones) return s;
+  const salida = celdaCiudadMasCercana(s.mapa, destino);
+  if (!salida) return s;
+  const corredores = s.corredores.map((k) => k.id === id ? { ...k, x: salida.x, y: salida.y, raciones, destino, estado: "fuera" } : k);
+  return log({ ...s, comida: s.comida - raciones, corredores },
+    `${c.nombre} sale con ${raciones} ${raciones === 1 ? "ración" : "raciones"}.`);
+}
+
+function cambiarDestino(s, id, destino) {
+  if (s.fin) return s;
+  const c = s.corredores[id];
+  if (c.estado !== "fuera" || !pasable(s.mapa, destino.x, destino.y)) return s;
+  return { ...s, corredores: s.corredores.map((k) => k.id === id ? { ...k, destino } : k) };
+}
+
+function volver(s, id) {
+  const c = s.corredores[id];
+  if (c.estado !== "fuera") return s;
+  if (celda(s.mapa, c.x, c.y) === "C") return entrar(s, c);
+  const objetivo = celdaCiudadMasCercana(s.mapa, c) || { x: 7, y: 7 };
+  return cambiarDestino(s, id, { x: objetivo.x, y: objetivo.y });
+}
+
+function usarAtajo(s, id) {
+  if (s.fin) return s;
+  const c = s.corredores[id];
+  if (c.estado !== "fuera" || c.atajo || s.conocimiento < COSTO_ATAJO) return s;
+  return log({ ...s, conocimiento: s.conocimiento - COSTO_ATAJO,
+    corredores: s.corredores.map((k) => k.id === id ? { ...k, atajo: true } : k) },
+    `${c.nombre} estudia las marcas: podrá atravesar una pared.`);
+}
+
+function entrar(s, c) {
+  const texto = c.carga > 0
+    ? `${c.nombre} vuelve a la ciudad y deposita ${c.carga} ${c.carga === 1 ? "material" : "materiales"}.`
+    : `${c.nombre} vuelve a la ciudad.`;
+  const k = { ...c, x: 6 + c.id, y: 7, carga: 0, estado: "ciudad", destino: null, raciones: 0, atajo: false };
+  return log({ ...s, materiales: s.materiales + c.carga, corredores: s.corredores.map((q) => q.id === c.id ? k : q) }, texto);
+}
+
+// ---------- fin de turno ----------
+function moverCorredor(s, c) {
+  if (c.estado !== "fuera" || !c.destino) return { s, c };
+  let mapa = s.mapa;
+  const ruta = camino(mapa, c, c.destino, c.atajo ? 1 : 0);
+  if (!ruta) {
+    return { s: log(s, `${c.nombre} no encuentra camino hacia su destino. Espera.`), c };
+  }
+  let pasos = Math.min(velocidad(s), ruta.length);
+  let { x, y, carga, atajo } = c;
+  let comida = s.comida, materiales = s.materiales, conocimiento = s.conocimiento;
+  let registro = s.registro.slice();
+  let salidaAlcanzada = s.salidaAlcanzada;
+  let estado = c.estado, destino = c.destino, raciones = c.raciones;
+  for (let i = 0; i < pasos; i++) {
+    const p = ruta[i];
+    const ch = mapa[p.y][p.x];
+    const veniaDeFuera = mapa[y][x] !== "C";
+    if (ch === "#") { atajo = false; registro.push(`${c.nombre} atraviesa una pared en ${coord(p)}.`); }
+    x = p.x; y = p.y;
+    if (ch === "M") {
+      const n = 1 + (hash(s.semilla, s.turno, c.id, i) % 2);
+      const toma = Math.min(n, CAPACIDAD - carga);
+      carga += toma;
+      mapa = ponerCelda(mapa, x, y, ".");
+      registro.push(`${c.nombre} encuentra escombros en ${coord(p)}: ${toma} ${toma === 1 ? "material" : "materiales"}.${toma < n ? " No puede cargar más." : ""}`);
+    } else if (ch === "K") {
+      conocimiento += 1;
+      mapa = ponerCelda(mapa, x, y, ".");
+      registro.push(`${c.nombre} lee una marca en ${coord(p)}: +1 conocimiento.`);
+    } else if (ch === "S") {
+      salidaAlcanzada = true;
+      registro.push(`${c.nombre} cruza la salida en ${coord(p)}.`);
+      estado = "salio"; destino = null;
+      break;
+    } else if (ch === "C" && veniaDeFuera) {
+      if (carga > 0) registro.push(`${c.nombre} vuelve a la ciudad y deposita ${carga} ${carga === 1 ? "material" : "materiales"}.`);
+      else registro.push(`${c.nombre} vuelve a la ciudad.`);
+      materiales += carga; carga = 0;
+      estado = "ciudad"; destino = null; raciones = 0; atajo = false;
+      break;
+    }
+  }
+  if (estado === "fuera" && destino && x === destino.x && y === destino.y) destino = null;
+  if (estado === "fuera" && !destino && mapa[y][x] === "C") {
+    if (carga > 0) registro.push(`${c.nombre} vuelve a la ciudad y deposita ${carga} ${carga === 1 ? "material" : "materiales"}.`);
+    else registro.push(`${c.nombre} vuelve a la ciudad.`);
+    materiales += carga; carga = 0; estado = "ciudad"; raciones = 0; atajo = false;
+  }
+  if (estado === "ciudad") { x = 6 + c.id; y = 7; }
+  return {
+    s: { ...s, mapa, comida, materiales, conocimiento, registro, salidaAlcanzada },
+    c: { ...c, x, y, carga, atajo, estado, destino, raciones },
+  };
+}
+
+function hash(...nums) {
+  let h = 2166136261;
+  for (const n of nums) { h ^= n + 1; h = Math.imul(h, 16777619); }
+  return (h >>> 0) % 1000;
+}
+
+const coord = (p) => "ABCDEFGHIJKLMNO"[p.x] + (p.y + 1);
+
+function avanzar(s) {
+  if (s.fin) return s;
+  const economia = s.turno % TICK_ECONOMIA === 0;
+  // 1. ciudad
+  if (economia) {
+    let comida = Math.max(0, s.comida + produccion(s) - CONSUMO);
+    const hambre = comida === 0 ? s.hambre + 1 : 0;
+    s = { ...s, comida, hambre };
+    if (hambre >= 2) {
+      return { ...s, fin: { tipo: "derrota", motivo: "La ciudad pasó demasiado tiempo sin comida." },
+        registro: [...s.registro, "Sigue sin haber comida. La ciudad cae."] };
+    }
+    if (hambre === 1) s = log(s, "No queda comida. Si sigue así, la ciudad cae.");
+  }
+  // 2. expediciones
+  let corredores = s.corredores.slice();
+  for (let i = 0; i < corredores.length; i++) {
+    const r = moverCorredor(s, corredores[i]);
+    s = r.s; corredores[i] = r.c;
+  }
+  // 3. raciones
+  corredores = corredores.map((c) => {
+    if (c.estado !== "fuera" || !economia) return c;
+    const raciones = c.raciones - 1;
+    if (raciones <= 0) {
+      s = log(s, `${c.nombre} se queda sin raciones en ${coord(c)}. Se pierde en el laberinto.`);
+      return { ...c, raciones: 0, estado: "perdido", destino: null };
+    }
+    return { ...c, raciones };
+  });
+  s = { ...s, corredores };
+  // 4. ciclo
+  if (s.turno % CICLO === 0) {
+    const mapa = desplazarMapa(s.mapa);
+    corredores = s.corredores.map((c) => {
+      if (c.estado !== "fuera") return c;
+      const p = desplazarCoord(c.x, c.y);
+      return { ...c, x: p.x, y: p.y };
+    });
+    s = log({ ...s, mapa, corredores }, "El laberinto gira. Las filas marcadas se desplazan una celda.");
+  }
+  // 5. fin
+  if (s.salidaAlcanzada) {
+    s = { ...s, fin: { tipo: "victoria", motivo: "Un corredor encontró la salida." } };
+  } else if (s.corredores.every((c) => c.estado === "perdido")) {
+    s = { ...s, fin: { tipo: "derrota", motivo: "No quedan corredores." } };
+  } else if (s.turno >= TURNOS_MAX) {
+    s = { ...s, fin: { tipo: "tiempo", motivo: "Se acabaron los turnos." } };
+  }
+  if (s.fin) return s;
+  return { ...s, turno: s.turno + 1 };
+}
+
+const terminarTurno = avanzar;
+const ticksHastaGiro = (s) => CICLO - ((s.turno - 1) % CICLO);
+const ticksHastaRacion = (s) => TICK_ECONOMIA - ((s.turno - 1) % TICK_ECONOMIA);
+
+function puntos(s) {
+  return s.materiales + s.conocimiento + (s.salidaAlcanzada ? PUNTOS_SALIDA : 0);
+}
+
+return { ANCHO, ALTO, TICK_ECONOMIA, CICLO, TURNOS_MAX, CAPACIDAD, COSTO_HUERTO, COSTO_TALLER, COSTO_ATAJO, PUNTOS_SALIDA, FILAS_MOVILES, crearRng, esCiudad, enTablero, celda, pasable, desplazarMapa, desplazarCoord, camino, distancias, celdaCiudadMasCercana, evaluarMapa, generarMapa, nuevaPartida, velocidad, produccion, CONSUMO, construir, enviar, cambiarDestino, volver, usarAtajo, coord, avanzar, terminarTurno, ticksHastaGiro, ticksHastaRacion, puntos };
+})();
+
+
+const $ = (id) => document.getElementById(id);
+const cv = $("tablero"), ctx = cv.getContext("2d");
+const N = M.ANCHO, TAM = cv.width / N;
+
+let s = null, seleccion = null, pendiente = null, raciones = 4, inicio = 0;
+let pausado = true, velocidadJuego = 1, ultimoTick = 0, posPrevias = new Map(), fraccion = 1;
+const MS_TICK = 1000;
+
+function nueva(semilla) {
+  s = M.nuevaPartida(semilla);
+  seleccion = null; pendiente = null; raciones = 4; inicio = Date.now();
+  pausado = true; posPrevias = new Map(); fraccion = 1; ultimoTick = performance.now();
+  $("fin").style.display = "none";
+  render();
+}
+
+// ---------- reloj ----------
+function tick() {
+  posPrevias = new Map(s.corredores.map((k) => [k.id, { x: k.x, y: k.y, estado: k.estado }]));
+  s = M.avanzar(s);
+  fraccion = 0;
+  render();
+}
+function bucle(ahora) {
+  requestAnimationFrame(bucle);
+  if (!s || s.fin) return;
+  if (pausado) { ultimoTick = ahora; return; }
+  const paso = MS_TICK / velocidadJuego;
+  if (ahora - ultimoTick >= paso) { ultimoTick = ahora; tick(); }
+  fraccion = Math.min(1, (ahora - ultimoTick) / paso);
+  dibujar(); // el tablero se redibuja cada cuadro para interpolar el movimiento
+  actualizarReloj();
+}
+requestAnimationFrame(bucle);
+
+function posDibujo(k) {
+  const p = posPrevias.get(k.id);
+  if (!p || p.estado !== k.estado || Math.abs(p.x - k.x) > 1 || Math.abs(p.y - k.y) > 1) return { x: k.x, y: k.y };
+  return { x: p.x + (k.x - p.x) * fraccion, y: p.y + (k.y - p.y) * fraccion };
+}
+function mmss(ticks) { const t = Math.max(0, ticks); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; }
+function actualizarReloj() {
+  $("reloj").textContent = `${mmss(M.TURNOS_MAX - s.turno + 1)} · gira en ${M.ticksHastaGiro(s)} s`;
+}
+
+// ---------- dibujo ----------
+function dibujar() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const ch = s.mapa[y][x];
+    let color = M.FILAS_MOVILES.has(y) ? css("--movil") : css("--corredor");
+    if (ch === "#") color = css("--pared");
+    else if (ch === "C") color = css("--ciudad");
+    else if (ch === "S") color = css("--salida");
+    else if (ch === "M") color = css("--escombros");
+    else if (ch === "K") color = css("--marca");
+    ctx.fillStyle = color;
+    ctx.fillRect(x * TAM, y * TAM, TAM, TAM);
+    ctx.strokeStyle = css("--borde");
+    ctx.strokeRect(x * TAM + .5, y * TAM + .5, TAM - 1, TAM - 1);
+    if (ch === "M" || ch === "K" || ch === "S") {
+      ctx.fillStyle = ch === "M" ? css("--tinta") : "#fff";
+      ctx.font = `bold ${TAM * .5}px Georgia`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(ch, x * TAM + TAM / 2, y * TAM + TAM / 2 + 1);
+    }
+  }
+  // flechas de giro
+  ctx.fillStyle = css("--suave");
+  ctx.font = `${TAM * .55}px Georgia`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (const y of M.FILAS_MOVILES) {
+    const der = y < 7;
+    ctx.fillText(der ? "›" : "‹", (der ? N - 1 : 0) * TAM + TAM / 2, y * TAM + TAM / 2);
+  }
+  // ruta prevista
+  const c = seleccion !== null ? s.corredores[seleccion] : null;
+  const destino = pendiente || (c && c.destino);
+  if (c && destino && (c.estado === "fuera" || c.estado === "ciudad")) {
+    const ruta = M.camino(s.mapa, c, destino, c.atajo ? 1 : 0);
+    if (ruta) {
+      ctx.strokeStyle = css("--acento"); ctx.lineWidth = 3; ctx.setLineDash([6, 5]);
+      ctx.beginPath(); ctx.moveTo(c.x * TAM + TAM / 2, c.y * TAM + TAM / 2);
+      for (const p of ruta) ctx.lineTo(p.x * TAM + TAM / 2, p.y * TAM + TAM / 2);
+      ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1;
+    }
+    ctx.strokeStyle = css("--acento"); ctx.lineWidth = 3;
+    ctx.strokeRect(destino.x * TAM + 3, destino.y * TAM + 3, TAM - 6, TAM - 6);
+    ctx.lineWidth = 1;
+  }
+  // corredores
+  for (const k of s.corredores) {
+    if (k.estado === "perdido" || k.estado === "salio") continue;
+    const pd = posDibujo(k);
+    const cx = pd.x * TAM + TAM / 2, cy = pd.y * TAM + TAM / 2;
+    ctx.beginPath(); ctx.arc(cx, cy, TAM * .36, 0, Math.PI * 2);
+    ctx.fillStyle = seleccion === k.id ? css("--acento") : css("--tinta");
+    ctx.fill();
+    ctx.fillStyle = css("--papel"); ctx.font = `bold ${TAM * .45}px Georgia`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(k.nombre[0], cx, cy + 1);
+  }
+}
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+// ---------- interfaz ----------
+function render() {
+  dibujar();
+  actualizarReloj();
+  $("btnPausa").textContent = pausado ? (s.turno === 1 ? "Jugar" : "Seguir") : "Pausa";
+  $("btnPausa").disabled = !!s.fin;
+  $("btnVel").textContent = `×${velocidadJuego}`;
+  $("comida").textContent = s.comida;
+  $("materiales").textContent = s.materiales;
+  $("conocimiento").textContent = s.conocimiento;
+  $("semilla").textContent = s.semilla;
+  const bh = $("btnHuerto");
+  bh.textContent = `Huerto (${M.COSTO_HUERTO})${s.huertos ? " ×" + s.huertos : ""}`;
+  bh.disabled = !!s.fin || s.materiales < M.COSTO_HUERTO;
+  const bt = $("btnTaller");
+  bt.textContent = s.taller ? "Taller listo" : `Taller (${M.COSTO_TALLER})`;
+  bt.disabled = !!s.fin || s.taller || s.materiales < M.COSTO_TALLER;
+
+  $("corredores").innerHTML = s.corredores.map((k) => {
+    let estado = { ciudad: "en la ciudad", fuera: `fuera · ${k.raciones} rac.`, perdido: "perdido", salio: "¡salió!" }[k.estado];
+    if (k.estado === "fuera" && k.carga) estado += ` · ${k.carga} mat.`;
+    return `<div class="tarjeta ${k.estado} ${seleccion === k.id ? "sel" : ""}" data-id="${k.id}"><b>${k.nombre}</b>${estado}</div>`;
+  }).join("");
+  for (const el of document.querySelectorAll(".tarjeta")) el.onclick = () => seleccionar(+el.dataset.id);
+
+  const a = $("acciones");
+  const c = seleccion !== null ? s.corredores[seleccion] : null;
+  if (!c || c.estado === "perdido" || c.estado === "salio") {
+    a.innerHTML = `<div class="fila"><span style="color:var(--suave)">Toca un corredor para darle órdenes.</span></div>`;
+    $("pista").textContent = "";
+  } else if (c.estado === "ciudad") {
+    const ruta = pendiente ? M.camino(s.mapa, c, pendiente, 0) : null;
+    const segundos = ruta ? Math.ceil(ruta.length / M.velocidad(s)) : null;
+    const racionesIda = segundos ? Math.ceil(segundos / M.TICK_ECONOMIA) : null;
+    $("pista").textContent = pendiente
+      ? (ruta ? `Destino ${M.coord(pendiente)}: ${ruta.length} celdas, unos ${segundos} s de ida (${racionesIda} ${racionesIda === 1 ? "ración" : "raciones"} solo de ida).` : `No hay camino hasta ${M.coord(pendiente)} con el laberinto así.`)
+      : `${c.nombre} está en la ciudad. Toca una celda para elegir destino.`;
+    a.innerHTML = `<div class="fila">
+      <div class="stepper"><button id="menos">−</button><span>${raciones} rac.</span><button id="mas">+</button></div>
+      <button class="primario" id="btnEnviar" ${!pendiente || !ruta || s.comida < raciones ? "disabled" : ""}>Enviar</button>
+      <span style="font-size:12px;color:var(--suave)">cuesta ${raciones} comida</span>
+    </div>`;
+    $("menos").onclick = () => { raciones = Math.max(1, raciones - 1); render(); };
+    $("mas").onclick = () => { raciones = Math.min(8, raciones + 1); render(); };
+    $("btnEnviar").onclick = () => { s = M.enviar(s, c.id, pendiente, raciones); pendiente = null; render(); };
+  } else {
+    $("pista").textContent = c.destino
+      ? `${c.nombre} va hacia ${M.coord(c.destino)}. Toca otra celda para cambiarlo.`
+      : `${c.nombre} espera en ${M.coord(c)}. Toca una celda o pulsa Volver.`;
+    a.innerHTML = `<div class="fila">
+      <button id="btnVolver">Volver a la ciudad</button>
+      <button id="btnAtajo" ${c.atajo || s.conocimiento < M.COSTO_ATAJO ? "disabled" : ""}>${c.atajo ? "Atajo listo" : `Atajo (${M.COSTO_ATAJO} conoc.)`}</button>
+    </div>`;
+    $("btnVolver").onclick = () => { s = M.volver(s, c.id); render(); };
+    $("btnAtajo").onclick = () => { s = M.usarAtajo(s, c.id); render(); };
+  }
+
+  $("registro").innerHTML = s.registro.slice(-9).reverse().map((t) => `<p>${t}</p>`).join("");
+  if (s.fin) { pausado = true; mostrarFin(); }
+}
+
+function seleccionar(id) {
+  seleccion = seleccion === id ? null : id;
+  pendiente = null;
+  render();
+}
+
+cv.addEventListener("click", (ev) => {
+  const r = cv.getBoundingClientRect();
+  const x = Math.floor((ev.clientX - r.left) / r.width * N);
+  const y = Math.floor((ev.clientY - r.top) / r.height * N);
+  if (!M.enTablero(x, y) || s.fin) return;
+  const sobre = s.corredores.find((k) => k.x === x && k.y === y && (k.estado === "ciudad" || k.estado === "fuera"));
+  if (sobre && seleccion === null) return seleccionar(sobre.id);
+  const c = seleccion !== null ? s.corredores[seleccion] : null;
+  if (!c) { if (sobre) seleccionar(sobre.id); return; }
+  if (!M.pasable(s.mapa, x, y)) return;
+  if (c.estado === "ciudad") pendiente = { x, y };
+  else if (c.estado === "fuera") s = M.cambiarDestino(s, c.id, { x, y });
+  render();
+});
+
+$("btnHuerto").onclick = () => { s = M.construir(s, "huerto"); render(); };
+$("btnTaller").onclick = () => { s = M.construir(s, "taller"); render(); };
+$("btnPausa").onclick = () => { pausado = !pausado; ultimoTick = performance.now(); render(); };
+$("btnVel").onclick = () => { velocidadJuego = velocidadJuego === 1 ? 2 : 1; render(); };
+document.addEventListener("keydown", (e) => { if (e.code === "Space") { e.preventDefault(); $("btnPausa").click(); } });
+$("btnNueva").onclick = (e) => { e.preventDefault(); nueva(); };
+$("btnOtra").onclick = () => nueva();
+$("btnCopiar").onclick = async (e) => {
+  e.preventDefault();
+  const texto = JSON.stringify(leerPartidas(), null, 2);
+  try { await navigator.clipboard.writeText(texto); $("pista").textContent = "Registro copiado al portapapeles."; }
+  catch { prompt("Copia el registro:", texto); }
+};
+
+// ---------- registro de partidas (solo en este navegador) ----------
+function leerPartidas() { try { return JSON.parse(localStorage.getItem("elclaro.partidas") || "[]"); } catch { return []; } }
+function guardarPartida() {
+  try {
+    const lista = leerPartidas();
+    lista.push({ fecha: new Date().toISOString(), semilla: s.semilla, resultado: s.fin.tipo, motivo: s.fin.motivo,
+      ticks: s.turno, segundos: Math.round((Date.now() - inicio) / 1000), puntos: M.puntos(s),
+      huertos: s.huertos, taller: s.taller, perdidos: s.corredores.filter((k) => k.estado === "perdido").length });
+    localStorage.setItem("elclaro.partidas", JSON.stringify(lista));
+  } catch {}
+}
+let finGuardado = false;
+function mostrarFin() {
+  if (!finGuardado) { guardarPartida(); finGuardado = true; }
+  $("finTitulo").textContent = { victoria: "Salieron del laberinto", derrota: "El Claro cae", tiempo: "Se acabó el tiempo" }[s.fin.tipo];
+  $("finMotivo").textContent = `${s.fin.motivo} Tiempo jugado: ${mmss(s.turno)}.`;
+  $("finPuntos").textContent = `Puntos: ${M.puntos(s)} (materiales + conocimiento${s.salidaAlcanzada ? " + 10 por la salida" : ""}). Partidas en este navegador: ${leerPartidas().length}.`;
+  $("fin").style.display = "flex";
+}
+const _nueva = nueva;
+nueva = function (semilla) { finGuardado = false; _nueva(semilla); };
+
+const param = new URLSearchParams(location.search).get("semilla");
+nueva(param ? +param : undefined);
+
+try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => dibujar()); } catch {}
+</script>
+</body>
+</html>

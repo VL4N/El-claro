@@ -8,6 +8,26 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-21 · Sesión 4: aplicación instalable
+
+**Hecho**
+
+- El juego se instala como aplicación en el celular: manifiesto web, iconos y un trabajador de servicio que lo guarda para abrirlo sin conexión y busca la versión nueva cuando hay red.
+- Tema oscuro: la interfaz y el tablero siguen el tema del sistema.
+- Empaquetador a un solo archivo HTML con el motor incrustado, para compartir sin servidor o publicarlo como página privada en claude.ai.
+
+**Decidido**
+
+- **La base del juego es web y lo será hasta el final.** Lo que cambia por plataforma es el envoltorio: aplicación web instalable ahora, Capacitor para las tiendas y Tauri o Electron para PC en la fase 6. Motivo: una sola base de código, probada automáticamente, publicada sin costo. Godot solo si en la fase 5 hiciera falta algo que el navegador no da.
+- **GitHub Pages necesita que el repositorio sea público** en el plan gratuito. Queda en manos del autor: hacerlo público, o jugar desde la página privada en claude.ai que mantiene el asistente.
+- **Los minutos de GitHub Actions no son un problema:** el flujo corre solo cuando cambia la carpeta del juego y dura uno o dos minutos, contra 2.000 al mes del plan gratuito.
+
+**Siguiente**
+
+- Decidir visibilidad del repositorio. Jugar 10 partidas. Responder la puerta de la fase 1.
+
+---
+
 ## 2026-10-21 · Sesión 3: tiempo real
 
 **Hecho**
