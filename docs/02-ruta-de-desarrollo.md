@@ -8,7 +8,7 @@
 | Fase | Nombre | Objetivo | Duración estimada | Puerta de decisión |
 |---|---|---|---|---|
 | 0 | Prototipo de papel | Validar el dilema central sin código | 1 semana | ¿Decidir "mando ahora o espero" genera tensión? |
-| 1 | Prototipo mínimo | Bucle base jugable con cuadrados y texto | 3 a 4 semanas | ¿Es divertido 20 minutos seguidos? |
+| 1 | Prototipo mínimo | Bucle base jugable en tiempo real con cuadrados y texto | hecho, en prueba | ¿Es divertido 20 minutos seguidos? |
 | 2 | El laberinto se aprende | Patrón oculto y sala de mapas | 3 a 4 semanas | ¿Un jugador nuevo descubre al menos una regla solo? |
 | 3 | Cada persona cuenta | Corredores con identidad y facciones | 3 a 4 semanas | ¿Perder un corredor cambia cómo juega la gente? |
 | 4 | El laberinto responde | Reacción al comportamiento | 2 semanas | ¿El jugador nota que el laberinto "lo castiga o premia"? |
@@ -52,13 +52,14 @@ Si no, el ciclo es demasiado predecible o demasiado caótico. Ajustar N antes de
 - Dos edificios: huerto y taller.
 - Un tipo de corredor, sin nombre ni atributos. Se mueve N celdas por turno por una ruta que el jugador traza.
 - Hallazgos: escombros (materiales) y marcas (conocimiento).
-- Turnos por fases, como en el mapeo.
-- Derrota por comida. Sin victoria todavía.
+- Tiempo real con pausa: un tick por segundo, economía cada 6, giro cada 36.
+- Derrota por comida. Victoria al cruzar la salida (se incluyó porque es el ancla de la tensión).
 
 **Decisiones técnicas a tomar en esta fase:**
 
-- Motor. Recomendación: **Godot 4** con GDScript. Razones: gratis, buen soporte para cuadrículas 2D y juegos por turnos, exporta a PC y web sin esfuerzo, y la comunidad en español es grande. Alternativa válida: un prototipo en web pura (HTML y JavaScript) si se prefiere iterar aún más rápido y sin instalar nada.
-- Representación del laberinto: una matriz de celdas con estado. El cambio del laberinto es una función pura que recibe la matriz y el número de ciclo y devuelve la matriz nueva. Esto es clave para la fase 2: si el cambio es una función pura, se pueden componer reglas.
+- Motor. **Decidido: web pura (HTML, JavaScript y canvas)**, publicada en GitHub Pages. Se juega desde el celular y se prueba con un navegador automatizado. Godot 4 queda como alternativa para la fase 5 si hace falta.
+- Representación del laberinto: una matriz de celdas con estado. El cambio del laberinto es una función pura que recibe la matriz y devuelve la matriz nueva. Esto es clave para la fase 2: si el cambio es una función pura, se pueden componer reglas.
+- Tiempo: el motor avanza en ticks discretos (una función pura `avanzar`), y la interfaz los dispara con un reloj. Así el tiempo real se prueba sin navegador y la pausa es gratis.
 - Guardado: ninguno todavía.
 
 **Entregables:**
@@ -67,6 +68,8 @@ Si no, el ciclo es demasiado predecible o demasiado caótico. Ajustar N antes de
 - Registro de 10 partidas propias con duración y causa de derrota.
 
 **Puerta de decisión:** ¿Jugarías 20 minutos seguidos sin obligación? Si la respuesta honesta es no, el problema está en el bucle y ningún sistema encima lo va a arreglar.
+
+**Fase 1b (opcional, si la puerta pasa): vista isométrica.** Dibujar el mismo tablero en perspectiva isométrica con arte hecho por código: muros como bloques, la ciudad como casas, los corredores como figuras. Es solo presentación; el motor no cambia.
 
 ---
 

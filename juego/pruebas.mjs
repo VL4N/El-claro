@@ -35,11 +35,11 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   s = M.enviar(s, 0, { x: 7, y: 2 }, 5);
   ok(s.comida === comida0 - 5, "enviar cobra raciones");
   ok(s.corredores[0].estado === "fuera", "corredor sale");
-  s = M.terminarTurno(s);
-  ok(s.corredores[0].raciones === 4, "gasta una ración por turno");
-  ok(s.turno === 2, "avanza el turno");
+  for (let i = 0; i < M.TICK_ECONOMIA; i++) s = M.avanzar(s);
+  ok(s.corredores[0].raciones === 4 || s.corredores[0].estado === "ciudad", "gasta una ración por periodo de economía");
+  ok(s.turno === M.TICK_ECONOMIA + 1, "avanza el tiempo");
   s = M.volver(s, 0);
-  for (let i = 0; i < 6 && s.corredores[0].estado === "fuera"; i++) s = M.terminarTurno(s);
+  for (let i = 0; i < 60 && s.corredores[0].estado === "fuera"; i++) s = M.avanzar(s);
   ok(s.corredores[0].estado === "ciudad" || s.corredores[0].estado === "perdido", "vuelve o se pierde");
 }
 
@@ -51,8 +51,9 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   for (const [k, v] of d) if (v >= 4 && !M.esCiudad(k % 15, Math.floor(k / 15))) { lejos = { x: k % 15, y: Math.floor(k / 15) }; break; }
   s = M.enviar(s, 1, lejos, 1);
   ok(s.corredores[1].estado === "fuera", "sale con 1 ración");
-  s = M.terminarTurno(s);
-  ok(s.corredores[1].estado === "perdido", "con 1 ración se pierde al final del turno");
+  s = M.cambiarDestino(s, 1, lejos);
+  for (let i = 0; i < M.TICK_ECONOMIA; i++) s = M.avanzar(s);
+  ok(s.corredores[1].estado === "perdido", "con 1 ración se pierde al terminar el primer periodo");
 }
 
 // 4b. casos de la ciudad
@@ -67,11 +68,11 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   if (dest) {
     s = M.enviar(s, 0, dest, 6);
     ok(s.corredores[0].estado === "fuera" && M.esCiudad(s.corredores[0].x, s.corredores[0].y), "sale desde una celda de la ciudad");
-    s = M.terminarTurno(s);
+    s = M.avanzar(s);
     ok(s.corredores[0].estado === "fuera", "al salir hacia el este no vuelve a entrar por error");
     s = M.volver(s, 0);
     let g = 0;
-    while (s.corredores[0].estado === "fuera" && g++ < 12) { s = M.volver(s, 0); s = M.terminarTurno(s); }
+    while (s.corredores[0].estado === "fuera" && g++ < 80) { s = M.volver(s, 0); s = M.avanzar(s); }
     ok(s.corredores[0].estado !== "fuera", "volver termina con el corredor en la ciudad o perdido");
     if (s.corredores[0].estado === "ciudad") ok(s.corredores[0].x === 6 && s.corredores[0].y === 7, "al volver ocupa su lugar en la plaza");
   }
@@ -92,9 +93,9 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   for (let p = 0; p < 40; p++) {
     let s = M.nuevaPartida(100 + p);
     let guard = 0;
-    while (!s.fin && guard++ < 200) {
+    while (!s.fin && guard++ < 2000) {
       for (const c of s.corredores) {
-        if (c.estado === "ciudad" && rng() < 0.5) {
+        if (c.estado === "ciudad" && rng() < 0.1) {
           const x = Math.floor(rng() * 15), y = Math.floor(rng() * 15);
           s = M.enviar(s, c.id, { x, y }, 2 + Math.floor(rng() * 5));
         } else if (c.estado === "fuera" && !c.destino) {
@@ -103,7 +104,7 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
       }
       if (rng() < 0.3) s = M.construir(s, "huerto");
       if (rng() < 0.3) s = M.construir(s, "taller");
-      s = M.terminarTurno(s);
+      s = M.avanzar(s);
     }
     ok(s.fin, `partida ${p} no terminó`);
     if (s.fin) resultados[s.fin.tipo]++;
@@ -124,11 +125,12 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
       const c0 = s.corredores[0];
       if (c0.estado === "ciudad") {
         const ruta = M.camino(s.mapa, c0, sal);
-        if (ruta && Math.ceil(ruta.length / M.velocidad(s)) + 1 <= 8 && s.comida >= 8) s = M.enviar(s, 0, sal, 8);
+        const ticks = Math.ceil(ruta ? ruta.length / M.velocidad(s) : 999);
+        if (ruta && ticks <= 8 * M.TICK_ECONOMIA && s.comida >= 8) s = M.enviar(s, 0, sal, 8);
       } else if (c0.estado === "fuera") {
         s = M.cambiarDestino(s, 0, sal);
       }
-      s = M.terminarTurno(s);
+      s = M.avanzar(s);
     }
     if (s.fin.tipo === "victoria") victorias++;
   }

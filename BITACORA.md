@@ -8,6 +8,28 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-21 · Sesión 3: tiempo real
+
+**Hecho**
+
+- El motor avanza en ticks de un segundo: economía y raciones cada 6, giro cada 36, partida de 6 minutos. Las pruebas se adaptaron y pasan.
+- La interfaz corre sola con botón de Jugar/Pausa, velocidad ×1 o ×2, barra espaciadora para pausar y movimiento interpolado de los corredores.
+- Mapeo y ruta actualizados al nuevo bucle.
+
+**Decidido**
+
+- **Tiempo real con pausa, un solo jugador.** Es la idea original del autor: "que pase todo a la vez, como Age of Empires, pero en el laberinto". Motivo para la pausa: la habilidad que se quiere premiar es decidir, no reaccionar. La pausa deja pensar y la presión sigue viniendo del reloj del giro y de las raciones.
+- **El motor sigue siendo discreto.** Un tick por segundo, como función pura. Motivo: se prueba sin navegador, la pausa es trivial y la velocidad ×2 es solo cambiar el reloj.
+- **Sobre el aspecto visual "tipo Age of Empires":** se separó en tres cosas. La vista isométrica la hace el asistente con arte por código, como fase 1b opcional. El arte con acabado profesional queda para la fase 5 y requiere arte generado (con créditos del autor) o una persona que dibuje. El tiempo real ya está resuelto.
+- **Un prototipo es simple a propósito.** Motivo: se construye lo mínimo para responder una sola pregunta (¿es divertido el dilema central?) antes de invertir en arte, ciudad grande o narrativa. Todo lo demás viene en las fases siguientes, una capa por fase.
+
+**Siguiente**
+
+- Activar GitHub Pages (lo hace el autor) y jugar 10 partidas.
+- Si la puerta pasa: fase 1b, vista isométrica.
+
+---
+
 ## 2026-10-21 · Sesión 2: el prototipo pasa a código
 
 **Hecho**

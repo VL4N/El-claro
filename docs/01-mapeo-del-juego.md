@@ -17,7 +17,7 @@ Estos cuatro pilares son el filtro para cualquier idea nueva. Si una mecánica n
 | **El laberinto se aprende** | Los cambios de paredes siguen reglas que el jugador puede descubrir. Ganar es entender. | Un mapa aleatorio que se reinicia sin sentido. |
 | **Cada persona cuenta** | Pocos corredores, con nombre y habilidades. Perder uno duele en la ciudad y en el mapa. | Unidades desechables producidas en masa. |
 | **Adentro y afuera se afectan** | Lo que construyes cambia el laberinto y lo que exploras cambia la ciudad. | Dos juegos pegados con una pantalla de carga entre medio. |
-| **La presión viene del reloj, no del enemigo** | Las paredes se mueven cada N turnos. La tensión es tomar decisiones a tiempo. | Oleadas de enemigos como única fuente de dificultad. |
+| **La presión viene del reloj, no del enemigo** | El tiempo corre, las paredes se mueven cada ciclo y las raciones se gastan. La tensión es decidir a tiempo, con pausa disponible para pensar. | Oleadas de enemigos como única fuente de dificultad. Reflejos como habilidad principal. |
 
 ## 3. Identidad propia (distancia de Maze Runner)
 
@@ -27,7 +27,7 @@ Nos alejamos de la estética y la historia:
 - No hay virus, organización secreta ni adolescentes elegidos.
 - El laberinto no es una prueba de nadie. Es un sistema con reglas propias, casi un organismo.
 - La ciudad tiene historia acumulada: generaciones que ya intentaron salir y dejaron mapas incompletos.
-- Tono: misterio y gestión, no acción. Referencias más cercanas: *Frostpunk* (decisiones morales bajo presión), *Into the Breach* (información completa y decisiones limpias), *Return of the Obra Dinn* (deducción).
+- Tono: misterio y gestión, no acción. Referencias más cercanas: *Frostpunk* (tiempo real con pausa y decisiones morales bajo presión), *Age of Empires* (ver la ciudad crecer y las unidades ir y volver), *Return of the Obra Dinn* (deducción).
 
 ## 4. Las dos capas
 
@@ -57,7 +57,7 @@ Una cuadrícula alrededor de la ciudad. Cada celda es pasillo, pared o punto de 
 
 **Reglas del cambio (el corazón del juego):**
 
-- El laberinto cambia cada N turnos (el "ciclo"). N empieza en 5 y puede variar según el estado de la ciudad.
+- El laberinto cambia cada cierto tiempo (el "ciclo"). En el prototipo son 36 segundos, y puede variar según el estado de la ciudad.
 - Los cambios NO son aleatorios. Cada partida genera un **patrón oculto** compuesto de 3 a 5 reglas simples, por ejemplo:
   - "Las paredes del sector norte rotan en sentido horario cada ciclo."
   - "Un pasillo que fue recorrido dos veces se cierra al ciclo siguiente."
@@ -83,7 +83,7 @@ Cada corredor tiene:
 - Estado: sano, herido, perdido, muerto.
 - Vínculos con otros habitantes. Si un corredor muere, sus vínculos afectan la moral y las facciones.
 
-Una expedición se planifica turno a turno: eliges la ruta con la información que tienes y el corredor la ejecuta. Si el laberinto cambia mientras está afuera, la ruta de vuelta puede no existir. Ahí está la decisión central: **¿lo mando ahora o espero al próximo ciclo?**
+Una expedición se ordena en cualquier momento, con el juego corriendo o en pausa: eliges destino y raciones, y el corredor va solo. Si el laberinto gira mientras está afuera, la ruta de vuelta puede no existir. Ahí está la decisión central: **¿lo mando ahora, con el giro a 10 segundos, o espero al próximo ciclo?**
 
 ### 4.4 Las facciones
 
@@ -143,15 +143,19 @@ Dependencias obligatorias:
 3. **El ciclo del laberinto depende del estado de la ciudad.** Sin esto, el laberinto es un fondo decorativo.
 4. **Las facciones reaccionan a expediciones y construcciones.** Sin esto, no hay dilema interno.
 
-## 6. Bucle de juego (un turno)
+## 6. Bucle de juego (tiempo real con pausa)
 
-1. **Fase de ciudad.** Recolectas producción, asignas habitantes a edificios, construyes con materiales.
-2. **Fase de mapa.** Revisas el mapa dibujado, gastas conocimiento en deducciones, planificas rutas.
-3. **Fase de expedición.** Cada corredor afuera avanza según su velocidad y la ruta trazada. Resuelves hallazgos.
-4. **Fase de ciclo.** Si el contador llega a N, el laberinto cambia según el patrón. Los corredores afuera quedan donde estaban, con el mapa nuevo.
-5. **Fase de facciones.** El balance se ajusta según lo que hiciste. Si cruza un umbral, ocurre un evento.
+Todo pasa a la vez, como en un juego de estrategia en tiempo real, pero para un solo jugador y con pausa libre. El jugador puede detener el tiempo cuando quiera para pensar y dar órdenes; la presión no viene de la velocidad de reacción, sino de que el laberinto gira con reloj y las raciones se gastan con reloj.
 
-Un turno debería durar entre 1 y 3 minutos de decisiones reales. Una partida completa, entre 2 y 4 horas.
+Lo que ocurre mientras el tiempo corre:
+
+1. **La ciudad produce y consume** a intervalos fijos (cada 6 segundos en el prototipo). Construir es inmediato y se puede hacer en cualquier momento.
+2. **Los corredores avanzan** una celda por segundo hacia el destino que se les dio, recalculando el camino si el laberinto cambió. Resuelven hallazgos al pasar.
+3. **Las raciones se gastan** a los mismos intervalos que la economía de la ciudad. Un corredor sin raciones fuera de la ciudad se pierde.
+4. **El laberinto gira** cada ciclo (36 segundos en el prototipo), según el patrón oculto. Los corredores que estén en filas móviles se mueven con ellas.
+5. **Las facciones** ajustan su balance con cada decisión y disparan eventos al cruzar umbrales. Los eventos pausan el juego.
+
+Una partida completa debería durar entre 20 y 40 minutos en el corte vertical. El prototipo de la fase 1 dura 6 minutos.
 
 ## 7. Condiciones de fin
 

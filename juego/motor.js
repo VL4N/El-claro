@@ -3,8 +3,10 @@
 
 export const ANCHO = 15;
 export const ALTO = 15;
-export const CICLO = 4;            // cada cuántos turnos cambia el laberinto
-export const TURNOS_MAX = 24;
+// El tiempo avanza en "ticks" (un segundo de juego a velocidad normal).
+export const TICK_ECONOMIA = 6;    // cada cuántos ticks la ciudad produce y consume, y los corredores gastan una ración
+export const CICLO = 36;           // cada cuántos ticks gira el laberinto
+export const TURNOS_MAX = 360;     // duración de la partida en ticks
 export const CAPACIDAD = 3;        // materiales que carga un corredor
 export const COSTO_HUERTO = 4;
 export const COSTO_TALLER = 5;
@@ -146,7 +148,7 @@ function colocar(mapa, rng, ch, cantidad, filtro) {
 export function evaluarMapa(mapa) {
   const estados = [];
   let m = mapa;
-  for (let i = 0; i <= TURNOS_MAX / CICLO; i++) {
+  for (let i = 0; i <= Math.floor(TURNOS_MAX / CICLO); i++) {
     estados.push(m);
     m = desplazarMapa(m);
   }
@@ -204,14 +206,14 @@ export function nuevaPartida(semilla = Date.now() % 1000000) {
     comida: 10, materiales: 0, conocimiento: 0, hambre: 0,
     huertos: 0, taller: false,
     corredores, salidaAlcanzada: false,
-    registro: [`Turno 1. El Claro despierta. Tres corredores esperan en la plaza.`],
+    registro: [`El Claro despierta. Tres corredores esperan en la plaza.`],
     fin: null,
   };
 }
 
 const log = (s, texto) => ({ ...s, registro: [...s.registro, texto] });
 
-export function velocidad(s) { return s.taller ? 3 : 2; }
+export function velocidad(s) { return s.taller ? 2 : 1; }
 export function produccion(s) { return 2 + 2 * s.huertos; }
 export const CONSUMO = 2;
 
@@ -341,17 +343,20 @@ function hash(...nums) {
 
 export const coord = (p) => "ABCDEFGHIJKLMNO"[p.x] + (p.y + 1);
 
-export function terminarTurno(s) {
+export function avanzar(s) {
   if (s.fin) return s;
+  const economia = s.turno % TICK_ECONOMIA === 0;
   // 1. ciudad
-  let comida = Math.max(0, s.comida + produccion(s) - CONSUMO);
-  const hambre = comida === 0 ? s.hambre + 1 : 0;
-  s = { ...s, comida, hambre };
-  if (hambre >= 2) {
-    return { ...s, fin: { tipo: "derrota", motivo: "La ciudad pasó dos turnos sin comida." },
-      registro: [...s.registro, "Segundo turno sin comida. La ciudad cae."] };
+  if (economia) {
+    let comida = Math.max(0, s.comida + produccion(s) - CONSUMO);
+    const hambre = comida === 0 ? s.hambre + 1 : 0;
+    s = { ...s, comida, hambre };
+    if (hambre >= 2) {
+      return { ...s, fin: { tipo: "derrota", motivo: "La ciudad pasó demasiado tiempo sin comida." },
+        registro: [...s.registro, "Sigue sin haber comida. La ciudad cae."] };
+    }
+    if (hambre === 1) s = log(s, "No queda comida. Si sigue así, la ciudad cae.");
   }
-  if (hambre === 1) s = log(s, "No queda comida. Si el próximo turno termina igual, la ciudad cae.");
   // 2. expediciones
   let corredores = s.corredores.slice();
   for (let i = 0; i < corredores.length; i++) {
@@ -360,7 +365,7 @@ export function terminarTurno(s) {
   }
   // 3. raciones
   corredores = corredores.map((c) => {
-    if (c.estado !== "fuera") return c;
+    if (c.estado !== "fuera" || !economia) return c;
     const raciones = c.raciones - 1;
     if (raciones <= 0) {
       s = log(s, `${c.nombre} se queda sin raciones en ${coord(c)}. Se pierde en el laberinto.`);
@@ -388,10 +393,12 @@ export function terminarTurno(s) {
     s = { ...s, fin: { tipo: "tiempo", motivo: "Se acabaron los turnos." } };
   }
   if (s.fin) return s;
-  s = { ...s, turno: s.turno + 1 };
-  const faltan = CICLO - ((s.turno - 1) % CICLO);
-  return log(s, `Turno ${s.turno}. ${faltan === 1 ? "El laberinto gira al final de este turno." : `Faltan ${faltan} turnos para el próximo giro.`}`);
+  return { ...s, turno: s.turno + 1 };
 }
+
+export const terminarTurno = avanzar;
+export const ticksHastaGiro = (s) => CICLO - ((s.turno - 1) % CICLO);
+export const ticksHastaRacion = (s) => TICK_ECONOMIA - ((s.turno - 1) % TICK_ECONOMIA);
 
 export function puntos(s) {
   return s.materiales + s.conocimiento + (s.salidaAlcanzada ? PUNTOS_SALIDA : 0);

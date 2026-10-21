@@ -15,7 +15,12 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--papel); color: var(--tinta); font-family: Georgia, "Times New Roman", serif; }
   body { padding: 12px 16px 32px; max-width: 520px; margin: 0 auto; }
-  header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 8px; }
+  .tiempo { display: flex; align-items: center; gap: 6px; }
+  .tiempo button { padding: 6px 10px; font-size: 13px; }
+  .tiempo button.activo { background: var(--tinta); color: var(--papel); }
+  #reloj { font-size: 13px; color: var(--suave); min-width: 120px; text-align: right; }
+  #btnPausa { min-width: 72px; }
   h1 { font-size: 22px; margin: 0; }
   #turno { font-size: 14px; color: var(--suave); }
   .recursos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
@@ -54,7 +59,11 @@
 <body>
 <header>
   <h1>El Claro</h1>
-  <div id="turno"></div>
+  <div class="tiempo">
+    <span id="reloj"></span>
+    <button id="btnPausa" class="primario">Jugar</button>
+    <button id="btnVel" title="velocidad">×1</button>
+  </div>
 </header>
 
 <div class="recursos">
@@ -69,14 +78,13 @@
 <div class="corredores" id="corredores"></div>
 <div class="acciones" id="acciones"></div>
 
-<button class="grande primario" id="btnTurno">Terminar turno</button>
 
 <div class="registro" id="registro"></div>
 
 <div class="leyenda">
-  <b>Cómo se juega.</b> Toca un corredor y luego una celda para darle destino. En la ciudad elige cuántas raciones lleva: cada turno fuera gasta una, y sin raciones se pierde. Las filas sombreadas giran cada 4 turnos: las del norte a la derecha, las del sur a la izquierda. Los escombros (M) dan materiales, las marcas (K) conocimiento. Con 4 materiales se construye un huerto; con 5, el taller. Gana quien cruza la salida (S) antes del turno 24.
+  <b>Cómo se juega.</b> Todo pasa a la vez: pulsa Jugar y el tiempo corre. Puedes pausar cuando quieras para pensar. Toca un corredor y luego una celda para darle destino. En la ciudad elige cuántas raciones lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. Las filas sombreadas giran cada 36 segundos: las del norte a la derecha, las del sur a la izquierda. Los escombros (M) dan materiales, las marcas (K) conocimiento. Con 4 materiales se construye un huerto; con 5, el taller. Gana quien cruza la salida (S) antes de que se acabe el tiempo (6 minutos).
 </div>
-<div class="pie">Prototipo de la fase 1. Semilla <span id="semilla"></span>. <a href="#" id="btnNueva">Nueva partida</a> · <a href="#" id="btnCopiar">Copiar registro de partidas</a></div>
+<div class="pie">Prototipo de la fase 1, tiempo real. Semilla <span id="semilla"></span>. <a href="#" id="btnNueva">Nueva partida</a> · <a href="#" id="btnCopiar">Copiar registro de partidas</a></div>
 
 <div id="fin"><div class="caja">
   <h2 id="finTitulo"></h2>
@@ -93,12 +101,44 @@ const cv = $("tablero"), ctx = cv.getContext("2d");
 const N = M.ANCHO, TAM = cv.width / N;
 
 let s = null, seleccion = null, pendiente = null, raciones = 4, inicio = 0;
+let pausado = true, velocidadJuego = 1, ultimoTick = 0, posPrevias = new Map(), fraccion = 1;
+const MS_TICK = 1000;
 
 function nueva(semilla) {
   s = M.nuevaPartida(semilla);
   seleccion = null; pendiente = null; raciones = 4; inicio = Date.now();
+  pausado = true; posPrevias = new Map(); fraccion = 1; ultimoTick = performance.now();
   $("fin").style.display = "none";
   render();
+}
+
+// ---------- reloj ----------
+function tick() {
+  posPrevias = new Map(s.corredores.map((k) => [k.id, { x: k.x, y: k.y, estado: k.estado }]));
+  s = M.avanzar(s);
+  fraccion = 0;
+  render();
+}
+function bucle(ahora) {
+  requestAnimationFrame(bucle);
+  if (!s || s.fin) return;
+  if (pausado) { ultimoTick = ahora; return; }
+  const paso = MS_TICK / velocidadJuego;
+  if (ahora - ultimoTick >= paso) { ultimoTick = ahora; tick(); }
+  fraccion = Math.min(1, (ahora - ultimoTick) / paso);
+  dibujar(); // el tablero se redibuja cada cuadro para interpolar el movimiento
+  actualizarReloj();
+}
+requestAnimationFrame(bucle);
+
+function posDibujo(k) {
+  const p = posPrevias.get(k.id);
+  if (!p || p.estado !== k.estado || Math.abs(p.x - k.x) > 1 || Math.abs(p.y - k.y) > 1) return { x: k.x, y: k.y };
+  return { x: p.x + (k.x - p.x) * fraccion, y: p.y + (k.y - p.y) * fraccion };
+}
+function mmss(ticks) { const t = Math.max(0, ticks); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; }
+function actualizarReloj() {
+  $("reloj").textContent = `${mmss(M.TURNOS_MAX - s.turno + 1)} · gira en ${M.ticksHastaGiro(s)} s`;
 }
 
 // ---------- dibujo ----------
@@ -148,7 +188,8 @@ function dibujar() {
   // corredores
   for (const k of s.corredores) {
     if (k.estado === "perdido" || k.estado === "salio") continue;
-    const cx = k.x * TAM + TAM / 2, cy = k.y * TAM + TAM / 2;
+    const pd = posDibujo(k);
+    const cx = pd.x * TAM + TAM / 2, cy = pd.y * TAM + TAM / 2;
     ctx.beginPath(); ctx.arc(cx, cy, TAM * .36, 0, Math.PI * 2);
     ctx.fillStyle = seleccion === k.id ? css("--acento") : css("--tinta");
     ctx.fill();
@@ -162,8 +203,10 @@ const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v
 // ---------- interfaz ----------
 function render() {
   dibujar();
-  const faltan = M.CICLO - ((s.turno - 1) % M.CICLO);
-  $("turno").textContent = `Turno ${s.turno} de ${M.TURNOS_MAX} · gira en ${faltan}`;
+  actualizarReloj();
+  $("btnPausa").textContent = pausado ? (s.turno === 1 ? "Jugar" : "Seguir") : "Pausa";
+  $("btnPausa").disabled = !!s.fin;
+  $("btnVel").textContent = `×${velocidadJuego}`;
   $("comida").textContent = s.comida;
   $("materiales").textContent = s.materiales;
   $("conocimiento").textContent = s.conocimiento;
@@ -189,9 +232,10 @@ function render() {
     $("pista").textContent = "";
   } else if (c.estado === "ciudad") {
     const ruta = pendiente ? M.camino(s.mapa, c, pendiente, 0) : null;
-    const turnos = ruta ? Math.ceil(ruta.length / M.velocidad(s)) : null;
+    const segundos = ruta ? Math.ceil(ruta.length / M.velocidad(s)) : null;
+    const racionesIda = segundos ? Math.ceil(segundos / M.TICK_ECONOMIA) : null;
     $("pista").textContent = pendiente
-      ? (ruta ? `Destino ${M.coord(pendiente)}: ${ruta.length} celdas, unos ${turnos} turnos de ida.` : `No hay camino hasta ${M.coord(pendiente)} con el laberinto así.`)
+      ? (ruta ? `Destino ${M.coord(pendiente)}: ${ruta.length} celdas, unos ${segundos} s de ida (${racionesIda} ${racionesIda === 1 ? "ración" : "raciones"} solo de ida).` : `No hay camino hasta ${M.coord(pendiente)} con el laberinto así.`)
       : `${c.nombre} está en la ciudad. Toca una celda para elegir destino.`;
     a.innerHTML = `<div class="fila">
       <div class="stepper"><button id="menos">−</button><span>${raciones} rac.</span><button id="mas">+</button></div>
@@ -214,8 +258,7 @@ function render() {
   }
 
   $("registro").innerHTML = s.registro.slice(-9).reverse().map((t) => `<p>${t}</p>`).join("");
-  $("btnTurno").disabled = !!s.fin;
-  if (s.fin) mostrarFin();
+  if (s.fin) { pausado = true; mostrarFin(); }
 }
 
 function seleccionar(id) {
@@ -241,7 +284,9 @@ cv.addEventListener("click", (ev) => {
 
 $("btnHuerto").onclick = () => { s = M.construir(s, "huerto"); render(); };
 $("btnTaller").onclick = () => { s = M.construir(s, "taller"); render(); };
-$("btnTurno").onclick = () => { s = M.terminarTurno(s); pendiente = null; render(); };
+$("btnPausa").onclick = () => { pausado = !pausado; ultimoTick = performance.now(); render(); };
+$("btnVel").onclick = () => { velocidadJuego = velocidadJuego === 1 ? 2 : 1; render(); };
+document.addEventListener("keydown", (e) => { if (e.code === "Space") { e.preventDefault(); $("btnPausa").click(); } });
 $("btnNueva").onclick = (e) => { e.preventDefault(); nueva(); };
 $("btnOtra").onclick = () => nueva();
 $("btnCopiar").onclick = async (e) => {
@@ -257,7 +302,7 @@ function guardarPartida() {
   try {
     const lista = leerPartidas();
     lista.push({ fecha: new Date().toISOString(), semilla: s.semilla, resultado: s.fin.tipo, motivo: s.fin.motivo,
-      turno: s.turno, segundos: Math.round((Date.now() - inicio) / 1000), puntos: M.puntos(s),
+      ticks: s.turno, segundos: Math.round((Date.now() - inicio) / 1000), puntos: M.puntos(s),
       huertos: s.huertos, taller: s.taller, perdidos: s.corredores.filter((k) => k.estado === "perdido").length });
     localStorage.setItem("elclaro.partidas", JSON.stringify(lista));
   } catch {}
@@ -266,7 +311,7 @@ let finGuardado = false;
 function mostrarFin() {
   if (!finGuardado) { guardarPartida(); finGuardado = true; }
   $("finTitulo").textContent = { victoria: "Salieron del laberinto", derrota: "El Claro cae", tiempo: "Se acabó el tiempo" }[s.fin.tipo];
-  $("finMotivo").textContent = `${s.fin.motivo} Turno ${s.turno}.`;
+  $("finMotivo").textContent = `${s.fin.motivo} Tiempo jugado: ${mmss(s.turno)}.`;
   $("finPuntos").textContent = `Puntos: ${M.puntos(s)} (materiales + conocimiento${s.salidaAlcanzada ? " + 10 por la salida" : ""}). Partidas en este navegador: ${leerPartidas().length}.`;
   $("fin").style.display = "flex";
 }
