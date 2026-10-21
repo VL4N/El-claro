@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>El Claro</title>
+<meta name="description" content="Prototipo de la fase 1: una ciudad encerrada en un laberinto que gira.">
+<style>
+  :root {
+    --papel: #f5efe4; --tinta: #221f1b; --suave: #6b6257; --borde: #d8cfc0;
+    --pared: #2b2723; --corredor: #fffdf8; --movil: #ebe2d1; --ciudad: #d9a441;
+    --salida: #4f9a5e; --escombros: #b9b1a3; --marca: #5f82c2; --acento: #b4532a;
+    --tarjeta: #fbf8f2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--papel); color: var(--tinta); font-family: Georgia, "Times New Roman", serif; }
+  body { padding: 12px 16px 32px; max-width: 520px; margin: 0 auto; }
+  header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  h1 { font-size: 22px; margin: 0; }
+  #turno { font-size: 14px; color: var(--suave); }
+  .recursos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+  .recurso { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 6px 8px; }
+  .recurso b { display: block; font-size: 20px; }
+  .recurso span { font-size: 12px; color: var(--suave); }
+  .recurso button { margin-top: 4px; width: 100%; font-size: 12px; padding: 4px; }
+  canvas { display: block; width: 100%; touch-action: manipulation; border: 1px solid var(--borde); border-radius: 6px; background: var(--corredor); }
+  .pista { font-size: 13px; color: var(--suave); margin: 6px 0 10px; min-height: 18px; }
+  .corredores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .tarjeta { background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 8px; padding: 6px 8px; font-size: 13px; cursor: pointer; }
+  .tarjeta.sel { border-color: var(--acento); }
+  .tarjeta b { display: block; font-size: 15px; }
+  .tarjeta.perdido, .tarjeta.salio { opacity: .55; }
+  .acciones { margin-top: 10px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 10px; min-height: 48px; }
+  .acciones .fila { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  button { font-family: inherit; font-size: 14px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--tinta); background: #fff; color: var(--tinta); cursor: pointer; }
+  button:disabled { opacity: .4; cursor: default; }
+  button.primario { background: var(--tinta); color: var(--papel); }
+  button.grande { width: 100%; padding: 14px; font-size: 17px; margin-top: 12px; }
+  .stepper { display: inline-flex; align-items: center; border: 1px solid var(--tinta); border-radius: 8px; overflow: hidden; }
+  .stepper button { border: 0; border-radius: 0; padding: 8px 12px; }
+  .stepper span { padding: 0 10px; min-width: 70px; text-align: center; font-size: 14px; }
+  .registro { margin-top: 14px; font-size: 13px; line-height: 1.45; border-top: 1px solid var(--borde); padding-top: 8px; }
+  .registro p { margin: 0 0 4px; }
+  .registro p:first-child { font-weight: bold; }
+  .leyenda { font-size: 12px; color: var(--suave); margin-top: 14px; line-height: 1.5; }
+  #fin { position: fixed; inset: 0; background: rgba(34,31,27,.75); display: none; align-items: center; justify-content: center; padding: 16px; }
+  #fin .caja { background: var(--papel); border-radius: 12px; padding: 20px; max-width: 360px; width: 100%; }
+  #fin h2 { margin: 0 0 8px; }
+  #fin p { margin: 0 0 10px; }
+  .pie { font-size: 12px; color: var(--suave); margin-top: 18px; }
+  .pie a { color: inherit; }
+</style>
+</head>
+<body>
+<header>
+  <h1>El Claro</h1>
+  <div id="turno"></div>
+</header>
+
+<div class="recursos">
+  <div class="recurso"><b id="comida">0</b><span>comida</span></div>
+  <div class="recurso"><b id="materiales">0</b><span>materiales</span><button id="btnHuerto"></button></div>
+  <div class="recurso"><b id="conocimiento">0</b><span>conocimiento</span><button id="btnTaller"></button></div>
+</div>
+
+<canvas id="tablero" width="600" height="600"></canvas>
+<div class="pista" id="pista"></div>
+
+<div class="corredores" id="corredores"></div>
+<div class="acciones" id="acciones"></div>
+
+<button class="grande primario" id="btnTurno">Terminar turno</button>
+
+<div class="registro" id="registro"></div>
+
+<div class="leyenda">
+  <b>Cómo se juega.</b> Toca un corredor y luego una celda para darle destino. En la ciudad elige cuántas raciones lleva: cada turno fuera gasta una, y sin raciones se pierde. Las filas sombreadas giran cada 4 turnos: las del norte a la derecha, las del sur a la izquierda. Los escombros (M) dan materiales, las marcas (K) conocimiento. Con 4 materiales se construye un huerto; con 5, el taller. Gana quien cruza la salida (S) antes del turno 24.
+</div>
+<div class="pie">Prototipo de la fase 1. Semilla <span id="semilla"></span>. <a href="#" id="btnNueva">Nueva partida</a> · <a href="#" id="btnCopiar">Copiar registro de partidas</a></div>
+
+<div id="fin"><div class="caja">
+  <h2 id="finTitulo"></h2>
+  <p id="finMotivo"></p>
+  <p id="finPuntos"></p>
+  <button class="primario" id="btnOtra">Otra partida</button>
+</div></div>
+
+<script type="module">
+import * as M from "./motor.js";
+
+const $ = (id) => document.getElementById(id);
+const cv = $("tablero"), ctx = cv.getContext("2d");
+const N = M.ANCHO, TAM = cv.width / N;
+
+let s = null, seleccion = null, pendiente = null, raciones = 4, inicio = 0;
+
+function nueva(semilla) {
+  s = M.nuevaPartida(semilla);
+  seleccion = null; pendiente = null; raciones = 4; inicio = Date.now();
+  $("fin").style.display = "none";
+  render();
+}
+
+// ---------- dibujo ----------
+function dibujar() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const ch = s.mapa[y][x];
+    let color = M.FILAS_MOVILES.has(y) ? css("--movil") : css("--corredor");
+    if (ch === "#") color = css("--pared");
+    else if (ch === "C") color = css("--ciudad");
+    else if (ch === "S") color = css("--salida");
+    else if (ch === "M") color = css("--escombros");
+    else if (ch === "K") color = css("--marca");
+    ctx.fillStyle = color;
+    ctx.fillRect(x * TAM, y * TAM, TAM, TAM);
+    ctx.strokeStyle = "rgba(34,31,27,.18)";
+    ctx.strokeRect(x * TAM + .5, y * TAM + .5, TAM - 1, TAM - 1);
+    if (ch === "M" || ch === "K" || ch === "S") {
+      ctx.fillStyle = ch === "M" ? css("--tinta") : "#fff";
+      ctx.font = `bold ${TAM * .5}px Georgia`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(ch, x * TAM + TAM / 2, y * TAM + TAM / 2 + 1);
+    }
+  }
+  // flechas de giro
+  ctx.fillStyle = "rgba(34,31,27,.35)";
+  ctx.font = `${TAM * .55}px Georgia`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+  for (const y of M.FILAS_MOVILES) {
+    const der = y < 7;
+    ctx.fillText(der ? "›" : "‹", (der ? N - 1 : 0) * TAM + TAM / 2, y * TAM + TAM / 2);
+  }
+  // ruta prevista
+  const c = seleccion !== null ? s.corredores[seleccion] : null;
+  const destino = pendiente || (c && c.destino);
+  if (c && destino && (c.estado === "fuera" || c.estado === "ciudad")) {
+    const ruta = M.camino(s.mapa, c, destino, c.atajo ? 1 : 0);
+    if (ruta) {
+      ctx.strokeStyle = css("--acento"); ctx.lineWidth = 3; ctx.setLineDash([6, 5]);
+      ctx.beginPath(); ctx.moveTo(c.x * TAM + TAM / 2, c.y * TAM + TAM / 2);
+      for (const p of ruta) ctx.lineTo(p.x * TAM + TAM / 2, p.y * TAM + TAM / 2);
+      ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1;
+    }
+    ctx.strokeStyle = css("--acento"); ctx.lineWidth = 3;
+    ctx.strokeRect(destino.x * TAM + 3, destino.y * TAM + 3, TAM - 6, TAM - 6);
+    ctx.lineWidth = 1;
+  }
+  // corredores
+  for (const k of s.corredores) {
+    if (k.estado === "perdido" || k.estado === "salio") continue;
+    const cx = k.x * TAM + TAM / 2, cy = k.y * TAM + TAM / 2;
+    ctx.beginPath(); ctx.arc(cx, cy, TAM * .36, 0, Math.PI * 2);
+    ctx.fillStyle = seleccion === k.id ? css("--acento") : css("--tinta");
+    ctx.fill();
+    ctx.fillStyle = "#fff"; ctx.font = `bold ${TAM * .45}px Georgia`;
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillText(k.nombre[0], cx, cy + 1);
+  }
+}
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+// ---------- interfaz ----------
+function render() {
+  dibujar();
+  const faltan = M.CICLO - ((s.turno - 1) % M.CICLO);
+  $("turno").textContent = `Turno ${s.turno} de ${M.TURNOS_MAX} · gira en ${faltan}`;
+  $("comida").textContent = s.comida;
+  $("materiales").textContent = s.materiales;
+  $("conocimiento").textContent = s.conocimiento;
+  $("semilla").textContent = s.semilla;
+  const bh = $("btnHuerto");
+  bh.textContent = `Huerto (${M.COSTO_HUERTO})${s.huertos ? " ×" + s.huertos : ""}`;
+  bh.disabled = !!s.fin || s.materiales < M.COSTO_HUERTO;
+  const bt = $("btnTaller");
+  bt.textContent = s.taller ? "Taller listo" : `Taller (${M.COSTO_TALLER})`;
+  bt.disabled = !!s.fin || s.taller || s.materiales < M.COSTO_TALLER;
+
+  $("corredores").innerHTML = s.corredores.map((k) => {
+    let estado = { ciudad: "en la ciudad", fuera: `fuera · ${k.raciones} rac.`, perdido: "perdido", salio: "¡salió!" }[k.estado];
+    if (k.estado === "fuera" && k.carga) estado += ` · ${k.carga} mat.`;
+    return `<div class="tarjeta ${k.estado} ${seleccion === k.id ? "sel" : ""}" data-id="${k.id}"><b>${k.nombre}</b>${estado}</div>`;
+  }).join("");
+  for (const el of document.querySelectorAll(".tarjeta")) el.onclick = () => seleccionar(+el.dataset.id);
+
+  const a = $("acciones");
+  const c = seleccion !== null ? s.corredores[seleccion] : null;
+  if (!c || c.estado === "perdido" || c.estado === "salio") {
+    a.innerHTML = `<div class="fila"><span style="color:var(--suave)">Toca un corredor para darle órdenes.</span></div>`;
+    $("pista").textContent = "";
+  } else if (c.estado === "ciudad") {
+    const ruta = pendiente ? M.camino(s.mapa, c, pendiente, 0) : null;
+    const turnos = ruta ? Math.ceil(ruta.length / M.velocidad(s)) : null;
+    $("pista").textContent = pendiente
+      ? (ruta ? `Destino ${M.coord(pendiente)}: ${ruta.length} celdas, unos ${turnos} turnos de ida.` : `No hay camino hasta ${M.coord(pendiente)} con el laberinto así.`)
+      : `${c.nombre} está en la ciudad. Toca una celda para elegir destino.`;
+    a.innerHTML = `<div class="fila">
+      <div class="stepper"><button id="menos">−</button><span>${raciones} rac.</span><button id="mas">+</button></div>
+      <button class="primario" id="btnEnviar" ${!pendiente || !ruta || s.comida < raciones ? "disabled" : ""}>Enviar</button>
+      <span style="font-size:12px;color:var(--suave)">cuesta ${raciones} comida</span>
+    </div>`;
+    $("menos").onclick = () => { raciones = Math.max(1, raciones - 1); render(); };
+    $("mas").onclick = () => { raciones = Math.min(8, raciones + 1); render(); };
+    $("btnEnviar").onclick = () => { s = M.enviar(s, c.id, pendiente, raciones); pendiente = null; render(); };
+  } else {
+    $("pista").textContent = c.destino
+      ? `${c.nombre} va hacia ${M.coord(c.destino)}. Toca otra celda para cambiarlo.`
+      : `${c.nombre} espera en ${M.coord(c)}. Toca una celda o pulsa Volver.`;
+    a.innerHTML = `<div class="fila">
+      <button id="btnVolver">Volver a la ciudad</button>
+      <button id="btnAtajo" ${c.atajo || s.conocimiento < M.COSTO_ATAJO ? "disabled" : ""}>${c.atajo ? "Atajo listo" : `Atajo (${M.COSTO_ATAJO} conoc.)`}</button>
+    </div>`;
+    $("btnVolver").onclick = () => { s = M.volver(s, c.id); render(); };
+    $("btnAtajo").onclick = () => { s = M.usarAtajo(s, c.id); render(); };
+  }
+
+  $("registro").innerHTML = s.registro.slice(-9).reverse().map((t) => `<p>${t}</p>`).join("");
+  $("btnTurno").disabled = !!s.fin;
+  if (s.fin) mostrarFin();
+}
+
+function seleccionar(id) {
+  seleccion = seleccion === id ? null : id;
+  pendiente = null;
+  render();
+}
+
+cv.addEventListener("click", (ev) => {
+  const r = cv.getBoundingClientRect();
+  const x = Math.floor((ev.clientX - r.left) / r.width * N);
+  const y = Math.floor((ev.clientY - r.top) / r.height * N);
+  if (!M.enTablero(x, y) || s.fin) return;
+  const sobre = s.corredores.find((k) => k.x === x && k.y === y && (k.estado === "ciudad" || k.estado === "fuera"));
+  if (sobre && seleccion === null) return seleccionar(sobre.id);
+  const c = seleccion !== null ? s.corredores[seleccion] : null;
+  if (!c) { if (sobre) seleccionar(sobre.id); return; }
+  if (!M.pasable(s.mapa, x, y)) return;
+  if (c.estado === "ciudad") pendiente = { x, y };
+  else if (c.estado === "fuera") s = M.cambiarDestino(s, c.id, { x, y });
+  render();
+});
+
+$("btnHuerto").onclick = () => { s = M.construir(s, "huerto"); render(); };
+$("btnTaller").onclick = () => { s = M.construir(s, "taller"); render(); };
+$("btnTurno").onclick = () => { s = M.terminarTurno(s); pendiente = null; render(); };
+$("btnNueva").onclick = (e) => { e.preventDefault(); nueva(); };
+$("btnOtra").onclick = () => nueva();
+$("btnCopiar").onclick = async (e) => {
+  e.preventDefault();
+  const texto = JSON.stringify(leerPartidas(), null, 2);
+  try { await navigator.clipboard.writeText(texto); $("pista").textContent = "Registro copiado al portapapeles."; }
+  catch { prompt("Copia el registro:", texto); }
+};
+
+// ---------- registro de partidas (solo en este navegador) ----------
+function leerPartidas() { try { return JSON.parse(localStorage.getItem("elclaro.partidas") || "[]"); } catch { return []; } }
+function guardarPartida() {
+  try {
+    const lista = leerPartidas();
+    lista.push({ fecha: new Date().toISOString(), semilla: s.semilla, resultado: s.fin.tipo, motivo: s.fin.motivo,
+      turno: s.turno, segundos: Math.round((Date.now() - inicio) / 1000), puntos: M.puntos(s),
+      huertos: s.huertos, taller: s.taller, perdidos: s.corredores.filter((k) => k.estado === "perdido").length });
+    localStorage.setItem("elclaro.partidas", JSON.stringify(lista));
+  } catch {}
+}
+let finGuardado = false;
+function mostrarFin() {
+  if (!finGuardado) { guardarPartida(); finGuardado = true; }
+  $("finTitulo").textContent = { victoria: "Salieron del laberinto", derrota: "El Claro cae", tiempo: "Se acabó el tiempo" }[s.fin.tipo];
+  $("finMotivo").textContent = `${s.fin.motivo} Turno ${s.turno}.`;
+  $("finPuntos").textContent = `Puntos: ${M.puntos(s)} (materiales + conocimiento${s.salidaAlcanzada ? " + 10 por la salida" : ""}). Partidas en este navegador: ${leerPartidas().length}.`;
+  $("fin").style.display = "flex";
+}
+const _nueva = nueva;
+nueva = function (semilla) { finGuardado = false; _nueva(semilla); };
+
+const param = new URLSearchParams(location.search).get("semilla");
+nueva(param ? +param : undefined);
+</script>
+</body>
+</html>

@@ -6,7 +6,15 @@ Juego de estrategia por turnos. Administras una pequeña ciudad encerrada en el 
 
 ## Estado
 
-Fase 0: prototipo de papel. Todavía no hay código del juego.
+Fase 1: prototipo mínimo jugable en el navegador, en `juego/`. La fase 0 (papel) quedó como opcional: el prototipo digital la reemplaza y la pregunta de la puerta se responde jugándolo.
+
+**Jugar:** cuando GitHub Pages esté activado, el juego vive en `https://vl4n.github.io/El-claro/`. Mientras tanto, se puede abrir `juego/index.html` sirviendo la carpeta con cualquier servidor estático.
+
+**Probar el motor:**
+
+```
+node juego/pruebas.mjs
+```
 
 El material de la fase está en [`fase-0/`](fase-0/):
 

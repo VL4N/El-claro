@@ -8,6 +8,35 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-21 · Sesión 2: el prototipo pasa a código
+
+**Hecho**
+
+- Motor del juego como lógica pura en `juego/motor.js`: generación de mapas verificada, giro del laberinto, caminos, expediciones, raciones, hallazgos, construcción, atajo y fin de partida.
+- Pruebas automáticas en `juego/pruebas.mjs`: generación, giro, salida alcanzable, casos de la ciudad y 40 partidas al azar sin errores.
+- Interfaz para celular en `juego/index.html`, probada con Playwright en un viewport de 390 píxeles.
+- Flujo de GitHub Actions que corre las pruebas y publica `juego/` en GitHub Pages.
+- Registro automático de partidas en el navegador (resultado, turno, duración, puntos) con botón para copiarlo.
+
+**Decidido**
+
+- **Motor: web (HTML, JavaScript y canvas), sin frameworks.** Motivo: el autor juega desde el celular, el asistente puede probarlo con un navegador automatizado, y GitHub Pages lo publica gratis. Godot queda como opción para la fase 5 si hace falta.
+- **La fase 0 en papel deja de ser obligatoria.** Motivo: un prototipo digital que se corrige en horas vale más que uno en papel. La puerta de decisión sigue en pie, pero se responde jugando el prototipo.
+- **Reparto de trabajo: el asistente programa, prueba y documenta; el autor juega, decide y provee lo que el asistente no puede hacer** (jugar con personas, criterio de diversión, arte final).
+- **Tamaño 15x15, ciudad 3x3 en el centro, 24 turnos, giro cada 4.** Motivo: es el alcance de la fase 1 en la ruta. Se incluyó la salida como victoria aunque la ruta decía "sin victoria todavía", porque es el ancla de la tensión y cuesta casi nada.
+- **Giro en dos sentidos.** Las filas pares del norte van a la derecha y las del sur a la izquierda, y las tres filas de la ciudad no se mueven. Motivo: con una sola dirección la ciudad quedaba en una fila móvil. Además, "el laberinto gira alrededor de la ciudad" se entiende de un vistazo.
+- **Economía: comida 10, la ciudad produce 2 y consume 2.** Las raciones son el único gasto y el huerto el único ingreso extra. Derrota si la ciudad pasa dos turnos seguidos en cero. Motivo: con consumo mayor a producción las partidas morían de hambre antes de que la salida se abriera; con esto, la comida es un presupuesto finito que el jugador decide cómo gastar.
+- **Los corredores parten desde la celda de la ciudad más cercana al destino y no se pueden enviar a la ciudad.** Motivo: corrige un error donde un corredor "volvía" sin haber salido.
+- **El generador de mapas rechaza mapas malos:** salida cerrada al inicio, abierta entre 2 y 4 de los 6 giros, a entre 10 y 16 pasos, ciudad nunca aislada, hallazgos alcanzables. Motivo: la misma lógica que en el tablero de papel, ahora automática.
+
+**Siguiente**
+
+- Activar GitHub Pages en el repositorio (Settings, Pages, Source: GitHub Actions). Lo hace el autor.
+- Jugar al menos 10 partidas y copiar el registro a la issue de la fase 1.
+- Responder la pregunta de la fase 1: ¿jugarías 20 minutos seguidos sin obligación?
+
+---
+
 ## 2026-09-19 · Sesión 1: de la idea al prototipo de papel
 
 **Hecho**
