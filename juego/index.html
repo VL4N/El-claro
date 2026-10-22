@@ -44,27 +44,33 @@
   h1 { font-size: 22px; margin: 0; }
   #turno { font-size: 14px; color: var(--suave); }
   .recursos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
-  .recurso { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 6px 8px; }
-  .recurso b { display: block; font-size: 20px; }
-  .recurso span { font-size: 12px; color: var(--suave); }
-  .recurso button { margin-top: 4px; width: 100%; font-size: 11px; padding: 4px 2px; white-space: normal; line-height: 1.2; }
+  .recurso { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 4px 8px; }
+  .recurso b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .recurso span { font-size: 11px; color: var(--suave); white-space: nowrap; }
+  .pestanas { display: flex; gap: 4px; margin-top: 8px; border-bottom: 1px solid var(--borde); }
+  .pestanas button { border: 0; border-radius: 8px 8px 0 0; background: transparent; color: var(--suave); padding: 8px 12px; font-size: 14px; }
+  .pestanas button.activo { background: var(--tarjeta); color: var(--tinta); border: 1px solid var(--borde); border-bottom-color: var(--tarjeta); margin-bottom: -1px; }
+  .panel { background: var(--tarjeta); border: 1px solid var(--borde); border-top: 0; border-radius: 0 0 8px 8px; padding: 10px; max-height: 300px; overflow-y: auto; }
+  .panel .nota { font-size: 12px; color: var(--suave); margin: 8px 0 0; }
+  .fila-extra button { font-size: 13px; white-space: normal; text-align: left; }
+  .leyenda p { margin: 0 0 8px; }
   canvas { display: block; width: 100%; touch-action: manipulation; border: 1px solid var(--borde); border-radius: 6px; background: var(--corredor); }
-  .salida-estado { font-size: 13px; margin: 0 0 8px; padding: 6px 10px; border-radius: 8px; background: var(--tarjeta); border: 1px solid var(--borde); }
+  .salida-estado { font-size: 12px; margin: 0 0 6px; padding: 4px 10px; border-radius: 8px; background: var(--tarjeta); border: 1px solid var(--borde); }
   .salida-estado.abierta { border-color: var(--salida); color: var(--salida); font-weight: bold; }
   .pista { font-size: 13px; color: var(--suave); margin: 6px 0 10px; min-height: 18px; }
   .corredores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .tarjeta { background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 8px; padding: 6px 8px; font-size: 13px; cursor: pointer; }
+  .tarjeta { background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 8px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
   .tarjeta.sel { border-color: var(--acento); }
   .tarjeta b { display: block; font-size: 15px; }
   .tarjeta.perdido, .tarjeta.salio { opacity: .55; }
   .tarjeta .aviso { display: block; color: var(--acento); font-size: 12px; margin-top: 2px; }
   .tarjeta .tiempo-restante { display: block; color: var(--suave); font-size: 12px; margin-top: 2px; }
-  .fila-extra { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
-  .comparar { display: flex; gap: 12px; margin-top: 12px; align-items: flex-start; }
+  .fila-extra { display: flex; gap: 8px; flex-wrap: wrap; }
+  .comparar { display: flex; gap: 12px; align-items: flex-start; }
   .comparar canvas { width: 150px; height: 150px; flex: 0 0 150px; border: 1px solid var(--borde); border-radius: 6px; background: var(--niebla); }
   .comparar-texto { font-size: 13px; color: var(--suave); min-width: 0; }
   .comparar-texto b { display: block; color: var(--tinta); margin-bottom: 4px; }
-  .sala { margin-top: 12px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 10px; font-size: 13px; }
+  .sala { margin-top: 12px; border-top: 1px solid var(--borde); padding-top: 10px; font-size: 13px; }
   .sala > b { display: block; margin-bottom: 2px; }
   .sala > span { color: var(--suave); }
   .sala .fila { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
@@ -73,7 +79,7 @@
   .reglas span { border: 1px solid var(--borde); border-radius: 999px; padding: 2px 8px; font-size: 12px; }
   .fila-extra button { font-size: 13px; }
   .fila-extra button.activo { background: var(--acento); color: #fff; border-color: var(--acento); }
-  .acciones { margin-top: 10px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 10px; min-height: 48px; }
+  .acciones { margin-top: 8px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 8px 10px; min-height: 44px; }
   .acciones .fila { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   button { font-family: inherit; font-size: 14px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--tinta); background: var(--tarjeta); color: var(--tinta); cursor: pointer; }
   button:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
@@ -83,15 +89,15 @@
   .stepper { display: inline-flex; align-items: center; border: 1px solid var(--tinta); border-radius: 8px; overflow: hidden; }
   .stepper button { border: 0; border-radius: 0; padding: 8px 12px; }
   .stepper span { padding: 0 10px; min-width: 70px; text-align: center; font-size: 14px; }
-  .registro { margin-top: 14px; font-size: 13px; line-height: 1.45; border-top: 1px solid var(--borde); padding-top: 8px; }
+  .registro { font-size: 13px; line-height: 1.45; }
   .registro p { margin: 0 0 4px; }
   .registro p:first-child { font-weight: bold; }
-  .leyenda { font-size: 12px; color: var(--suave); margin-top: 14px; line-height: 1.5; }
+  .leyenda { font-size: 12px; color: var(--suave); line-height: 1.5; }
   #fin { position: fixed; inset: 0; background: rgba(34,31,27,.75); display: none; align-items: center; justify-content: center; padding: 16px; }
   #fin .caja { background: var(--papel); border-radius: 12px; padding: 20px; max-width: 360px; width: 100%; }
   #fin h2 { margin: 0 0 8px; }
   #fin p { margin: 0 0 10px; }
-  .pie { font-size: 12px; color: var(--suave); margin-top: 18px; }
+  .pie { font-size: 12px; color: var(--suave); margin-top: 10px; }
   .pie a { color: inherit; }
 </style>
 </head>
@@ -107,8 +113,8 @@
 
 <div class="recursos">
   <div class="recurso"><b id="comida">0</b><span id="comidaNota">comida</span></div>
-  <div class="recurso"><b id="materiales">0</b><span>materiales</span><button id="btnHuerto"></button></div>
-  <div class="recurso"><b id="conocimiento">0</b><span>conocimiento</span><button id="btnTaller"></button></div>
+  <div class="recurso"><b id="materiales">0</b><span>materiales</span></div>
+  <div class="recurso"><b id="conocimiento">0</b><span>conocimiento</span></div>
 </div>
 
 <div class="salida-estado" id="salidaEstado"></div>
@@ -117,33 +123,57 @@
 
 <div class="corredores" id="corredores"></div>
 <div class="acciones" id="acciones"></div>
-<div class="fila-extra">
-  <button id="btnReclutar"></button>
-</div>
-<div class="comparar">
-  <canvas id="antes" width="180" height="180"></canvas>
-  <div class="comparar-texto">
-    <b>Antes del último giro</b>
-    <span id="antesNota">Cuando el laberinto gire, aquí quedará el mapa como lo conocías justo antes, para comparar con el de arriba.</span>
+
+<nav class="pestanas" id="pestanas">
+  <button data-tab="ciudad" class="activo">Ciudad</button>
+  <button data-tab="mapas">Mapas</button>
+  <button data-tab="registro">Registro</button>
+  <button data-tab="ayuda">Ayuda</button>
+</nav>
+
+<section class="panel" id="tab-ciudad">
+  <div class="fila-extra">
+    <button id="btnHuerto"></button>
+    <button id="btnTaller"></button>
+    <button id="btnReclutar"></button>
   </div>
-</div>
-<div class="sala">
-  <b>Sala de mapas</b>
-  <span>Pregunta qué hace una fila en cada giro. Cuesta 1 conocimiento. Lo confirmado se marca en el borde del tablero.</span>
-  <div class="fila">
-    <select id="selFila"></select>
-    <button id="btnConsultar">Preguntar</button>
+  <p class="nota">La ciudad produce 3 de comida y consume 2 cada 6 segundos. Los materiales solo vienen del laberinto.</p>
+</section>
+
+<section class="panel" id="tab-mapas" hidden>
+  <div class="comparar">
+    <canvas id="antes" width="180" height="180"></canvas>
+    <div class="comparar-texto">
+      <b>Antes del último giro</b>
+      <span id="antesNota">Cuando el laberinto gire, aquí quedará el mapa como lo conocías justo antes, para comparar con el de arriba.</span>
+    </div>
   </div>
-  <div id="reglas" class="reglas"></div>
-</div>
+  <div class="sala">
+    <b>Sala de mapas</b>
+    <span>Pregunta qué hace una fila o una columna en cada giro. Cuesta 1 conocimiento. Lo confirmado se marca en los bordes del tablero.</span>
+    <div class="fila">
+      <select id="selLinea"></select>
+      <button id="btnConsultar">Preguntar</button>
+    </div>
+    <div id="reglas" class="reglas"></div>
+  </div>
+</section>
 
+<section class="panel" id="tab-registro" hidden>
+  <div class="registro" id="registro"></div>
+</section>
 
-<div class="registro" id="registro"></div>
-
-<div class="leyenda">
-  <b>Cómo se juega.</b> Todo pasa a la vez: pulsa Jugar y el tiempo corre. Puedes pausar cuando quieras para pensar. El laberinto empieza a oscuras: solo se conoce lo que rodea a la ciudad, y los corredores van destapando lo que ven a su paso. Toca un corredor y luego una celda, aunque sea desconocida, para darle destino. En la ciudad elige cuántas raciones lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. El juego te recomienda cuántas necesita para ir y volver; la tarjeta de cada corredor muestra cuánto tiempo le queda y avisa si no le alcanza para volver. La ciudad produce 3 de comida y consume 2 cada 6 segundos; un huerto suma 2 más. Cada 60 segundos el laberinto gira: algunas filas se desplazan. Cuáles y hacia dónde es algo que tienes que descubrir observando: las celdas a la vista que cambiaron se marcan, y el mapa pequeño de abajo muestra cómo conocías el laberinto justo antes del último giro, para comparar. En la sala de mapas puedes gastar 1 conocimiento para confirmar qué hace una fila; lo confirmado queda marcado en los bordes del tablero. Lo visto antes de un giro se muestra apagado porque puede haber cambiado. Si pierdes corredores, puedes reclutar más con materiales y comida, hasta 6. Los escombros (M) dan materiales, las marcas (K) conocimiento. Con 4 materiales se construye un huerto; con 5, el taller (los corredores caminan el doble de rápido). Nadie sabe dónde está la salida: al leer 4 marcas aparece en el mapa, y entonces hay que llegar con un corredor antes de que se acabe el tiempo (8 minutos).
-</div>
-<div class="pie">Prototipo de la fase 2: el laberinto se aprende. Semilla <span id="semilla"></span>. <a href="#" id="btnNueva">Nueva partida</a> · <a href="#" id="btnCopiar">Copiar registro de partidas</a></div>
+<section class="panel" id="tab-ayuda" hidden>
+  <div class="leyenda">
+    <p><b>Todo pasa a la vez.</b> Pulsa Jugar y el tiempo corre. Pausa cuando quieras para pensar; también con la barra espaciadora.</p>
+    <p><b>Explorar.</b> El laberinto empieza a oscuras: solo se conoce lo que rodea a la ciudad. Los corredores destapan lo que ven a su paso. Toca un corredor y luego una celda, aunque sea desconocida, para darle destino.</p>
+    <p><b>Raciones.</b> En la ciudad elige cuántas lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. El juego recomienda cuántas necesita para ir y volver, con margen por lo que no se ha explorado. La tarjeta de cada corredor muestra el tiempo que le queda y avisa si no le alcanza para volver.</p>
+    <p><b>El giro.</b> Cada 60 segundos algunas filas o columnas se desplazan. Cuáles y hacia dónde cambia en cada partida: hay que descubrirlo. Las celdas a la vista que cambiaron se marcan, el mapa chico de la pestaña Mapas muestra cómo lo conocías antes del giro, y en la sala de mapas puedes gastar conocimiento para confirmar qué hace una fila o columna. Lo visto antes de un giro se muestra apagado porque puede haber cambiado.</p>
+    <p><b>Hallazgos.</b> Los escombros (M) dan materiales; las marcas (K), conocimiento. Con 4 materiales se construye un huerto; con 5, el taller (los corredores caminan el doble de rápido). Reclutar un corredor cuesta 3 materiales y 2 de comida, hasta 6.</p>
+    <p><b>La salida.</b> Nadie sabe dónde está. Al leer 4 marcas aparece en el mapa, y entonces hay que llegar con un corredor antes de que se acabe el tiempo (8 minutos).</p>
+  </div>
+  <div class="pie">Prototipo de la fase 2: el laberinto se aprende. Semilla <span id="semilla"></span>, patrón oculto. <a href="#" id="btnNueva">Nueva partida</a> · <a href="#" id="btnCopiar">Copiar registro de partidas</a></div>
+</section>
 
 <div id="fin"><div class="caja">
   <h2 id="finTitulo"></h2>
@@ -242,14 +272,14 @@ function dibujar() {
     ctx.lineWidth = 1;
   }
   // filas confirmadas en la sala de mapas
-  for (const [y, r] of Object.entries(s.filasConocidas)) {
-    const glifo = r === "derecha" ? "→" : r === "izquierda" ? "←" : "•";
-    for (const x of [0, N - 1]) {
-      ctx.fillStyle = css("--tinta"); ctx.globalAlpha = .85;
-      ctx.beginPath(); ctx.arc(x * TAM + TAM / 2, y * TAM + TAM / 2, TAM * .3, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 1; ctx.fillStyle = css("--papel"); ctx.font = `bold ${TAM * .45}px Georgia`;
+  for (const l of Object.values(s.lineasConocidas)) {
+    const puntos = l.tipo === "fila" ? [[0, l.indice], [N - 1, l.indice]] : [[l.indice, 0], [l.indice, N - 1]];
+    for (const [x, y] of puntos) {
+      ctx.fillStyle = l.modo === "quieta" ? css("--suave") : css("--tinta"); ctx.globalAlpha = .85;
+      ctx.beginPath(); ctx.arc(x * TAM + TAM / 2, y * TAM + TAM / 2, TAM * .32, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1; ctx.fillStyle = css("--papel"); ctx.font = `bold ${TAM * .42}px Georgia`;
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillText(glifo, x * TAM + TAM / 2, y * TAM + TAM / 2 + 1);
+      ctx.fillText(l.glifo, x * TAM + TAM / 2, y * TAM + TAM / 2 + 1);
     }
   }
   dibujarAntes();
@@ -318,7 +348,7 @@ function render() {
   if (abierta) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (s.conocido[y][x] === "S") sp = { x, y };
   se.textContent = abierta ? `Salida en ${sp ? M.coord(sp) : "?"}. Lleva un corredor hasta la S.` : `Salida desconocida: ${s.marcas} de ${M.MARCAS_PARA_SALIR} marcas leídas. Explora y busca las K.`;
   se.className = "salida-estado" + (abierta ? " abierta" : "");
-  $("comidaNota").textContent = `comida · +${M.produccion(s) - M.CONSUMO} cada ${M.TICK_ECONOMIA} s`;
+  $("comidaNota").textContent = `comida, +${M.produccion(s) - M.CONSUMO} cada ${M.TICK_ECONOMIA} s`;
   $("materiales").textContent = s.materiales;
   $("conocimiento").textContent = s.conocimiento;
   $("semilla").textContent = s.semilla;
@@ -341,14 +371,19 @@ function render() {
       ? `En el último giro cambiaron ${s.cambiosGiro.length} celdas a la vista, en ${filas.length === 1 ? "la fila" : "las filas"} ${filas.join(", ")}. Están marcadas en los dos mapas.`
       : "En el último giro no cambió nada de lo que estaba a la vista. Las filas que se mueven están en otra parte.";
   }
-  const sel = $("selFila");
-  if (!sel.options.length) for (let y = 0; y < N; y++) { const o = document.createElement("option"); o.value = y; o.textContent = `Fila ${y + 1}`; sel.appendChild(o); }
-  const yq = +sel.value;
+  const sel = $("selLinea");
+  if (!sel.options.length) {
+    for (let y = 0; y < N; y++) { const o = document.createElement("option"); o.value = "fila:" + y; o.textContent = `Fila ${y + 1}`; sel.appendChild(o); }
+    for (let x = 0; x < N; x++) { const o = document.createElement("option"); o.value = "columna:" + x; o.textContent = `Columna ${"ABCDEFGHIJKLMNO"[x]}`; sel.appendChild(o); }
+  }
+  const [tq, iq] = sel.value.split(":");
+  const kq = M.claveLinea(tq, +iq);
   const bc = $("btnConsultar");
-  bc.disabled = !!s.fin || !!s.filasConocidas[yq] || s.conocimiento < M.COSTO_CONSULTA;
-  bc.textContent = s.filasConocidas[yq] ? "Ya confirmada" : `Preguntar (${M.COSTO_CONSULTA} conoc.)`;
-  $("reglas").innerHTML = Object.entries(s.filasConocidas).sort((a, b) => a[0] - b[0])
-    .map(([y, r]) => `<span>Fila ${+y + 1}: ${{ derecha: "→ derecha", izquierda: "← izquierda", quieta: "• quieta" }[r]}</span>`).join("");
+  bc.disabled = !!s.fin || !!s.lineasConocidas[kq] || s.conocimiento < M.COSTO_CONSULTA;
+  bc.textContent = s.lineasConocidas[kq] ? "Ya confirmada" : `Preguntar (${M.COSTO_CONSULTA} conoc.)`;
+  $("reglas").innerHTML = Object.values(s.lineasConocidas)
+    .sort((a, b) => (a.tipo === b.tipo ? a.indice - b.indice : a.tipo === "fila" ? -1 : 1))
+    .map((l) => `<span>${M.nombreLinea(l.tipo, l.indice)}: ${l.glifo} ${l.modo === "quieta" ? "quieta" : l.modo === "alterna" ? "va y vuelve" : l.modo === "cada2" ? "solo giros pares" : "cada giro"}</span>`).join("");
   $("corredores").innerHTML = s.corredores.map((k) => {
     let estado = { ciudad: "en la ciudad", fuera: `fuera · ${k.raciones} rac.`, perdido: "perdido", salio: "¡salió!" }[k.estado];
     if (k.estado === "fuera" && k.carga) estado += ` · ${k.carga} mat.`;
@@ -422,8 +457,15 @@ cv.addEventListener("click", (ev) => {
 
 $("btnHuerto").onclick = () => { s = M.construir(s, "huerto"); render(); };
 $("btnReclutar").onclick = () => { s = M.reclutar(s); render(); };
-$("btnConsultar").onclick = () => { s = M.consultarFila(s, +$("selFila").value); render(); };
-$("selFila").onchange = () => render();
+$("btnConsultar").onclick = () => { const [t, i] = $("selLinea").value.split(":"); s = M.consultarLinea(s, t, +i); render(); };
+$("selLinea").onchange = () => render();
+for (const b of document.querySelectorAll("#pestanas button")) b.onclick = () => {
+  for (const o of document.querySelectorAll("#pestanas button")) o.classList.toggle("activo", o === b);
+  for (const p of document.querySelectorAll(".panel")) p.hidden = p.id !== "tab-" + b.dataset.tab;
+  try { localStorage.setItem("elclaro.pestana", b.dataset.tab); } catch {}
+  render();
+};
+try { const t = localStorage.getItem("elclaro.pestana"); if (t) document.querySelector(`#pestanas button[data-tab="${t}"]`)?.click(); } catch {}
 $("btnTaller").onclick = () => { s = M.construir(s, "taller"); render(); };
 $("btnPausa").onclick = () => { pausado = !pausado; ultimoTick = performance.now(); render(); };
 $("btnVel").onclick = () => { velocidadJuego = velocidadJuego === 1 ? 2 : 1; render(); };

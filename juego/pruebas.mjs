@@ -11,7 +11,7 @@ for (let semilla = 1; semilla <= 30; semilla++) {
   ok(g, `semilla ${semilla} sin mapa válido`);
   if (!g) continue;
   generados++; intentosTotal += g.intentos;
-  const ev = M.evaluarMapa(g.mapa);
+  const ev = M.evaluarMapa(g.mapa, g.patron);
   ok(ev.valido, `semilla ${semilla}: evaluación inválida`);
   ok(!ev.salidaAbierta[0], `semilla ${semilla}: salida abierta al inicio`);
   ok(g.mapa.length === 15 && g.mapa.every((f) => f.length === 15), `semilla ${semilla}: tamaño`);
@@ -19,13 +19,32 @@ for (let semilla = 1; semilla <= 30; semilla++) {
 }
 console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTotal / generados).toFixed(1)}`);
 
-// 2. desplazamiento conserva celdas y es inverso en 15 pasos
+// 2. desplazamiento: conserva celdas, la ciudad nunca se mueve, y cada patrón de la biblioteca es válido
 {
-  const g = M.generarMapa(3).mapa;
+  const base = M.BIBLIOTECA[0];
+  const g = M.generarMapa(3, base).mapa;
   let m = g;
-  for (let i = 0; i < 15; i++) m = M.desplazarMapa(m);
-  ok(m.join("") === g.join(""), "15 desplazamientos deben volver al inicio");
-  ok(M.desplazarMapa(g)[7] === g[7], "la fila de la ciudad no se mueve");
+  for (let i = 1; i <= 15; i++) m = M.desplazarMapa(m, base, i);
+  ok(m.join("") === g.join(""), "15 desplazamientos fijos deben volver al inicio");
+  for (const patron of M.BIBLIOTECA) {
+    for (const l of patron.lineas) ok(l.indice < 6 || l.indice > 8, `${patron.nombre}: la línea ${l.indice} cruza la ciudad`);
+    const gen = M.generarMapa(11, patron);
+    ok(gen, `${patron.nombre}: no se pudo generar un mapa válido`);
+    if (!gen) continue;
+    let mm = gen.mapa;
+    for (let i = 1; i <= 8; i++) {
+      mm = M.desplazarMapa(mm, patron, i);
+      ok(mm.join("").length === 225 && mm.join("").split("").filter((c) => c === "C").length === 9, `${patron.nombre}: giro ${i} rompe el mapa`);
+      for (let y = 6; y <= 8; y++) for (let x = 6; x <= 8; x++) ok(mm[y][x] === "C", `${patron.nombre}: la ciudad se movió en el giro ${i}`);
+    }
+    const x = 2, y = 1;
+    const ch = gen.mapa[y][x];
+    const p = M.desplazarCoord(x, y, patron, 1);
+    ok(M.desplazarMapa(gen.mapa, patron, 1)[p.y][p.x] === ch, `${patron.nombre}: desplazarCoord no sigue a la celda`);
+  }
+  const marea = M.BIBLIOTECA.find((p) => p.nombre === "marea");
+  const gm = M.generarMapa(5, marea).mapa;
+  ok(M.desplazarMapa(M.desplazarMapa(gm, marea, 1), marea, 2).join("") === gm.join(""), "marea: dos giros vuelven al inicio");
 }
 
 // 3. enviar, mover, volver y depositar
@@ -108,15 +127,19 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
 
 // 4e. sala de mapas
 {
-  let s = { ...M.nuevaPartida(3), conocimiento: 2 };
-  s = M.consultarFila(s, 1);
-  ok(s.filasConocidas[1] === "derecha" && s.conocimiento === 1, "consultar una fila móvil del norte");
-  s = M.consultarFila(s, 7);
-  ok(s.filasConocidas[7] === "quieta" && s.conocimiento === 0, "la fila de la ciudad está quieta");
-  s = M.consultarFila(s, 13);
-  ok(s.filasConocidas[13] === undefined, "sin conocimiento no se consulta");
-  s = M.consultarFila({ ...s, conocimiento: 1 }, 7);
-  ok(s.conocimiento === 1, "una fila ya conocida no se cobra");
+  let s = { ...M.nuevaPartida(3, M.BIBLIOTECA[0]), conocimiento: 2 };
+  s = M.consultarLinea(s, "fila", 1);
+  ok(s.lineasConocidas.f1 && s.lineasConocidas.f1.dir === 1 && s.conocimiento === 1, "consultar una fila móvil del norte");
+  s = M.consultarLinea(s, "fila", 7);
+  ok(s.lineasConocidas.f7 && s.lineasConocidas.f7.modo === "quieta" && s.conocimiento === 0, "la fila de la ciudad está quieta");
+  s = M.consultarLinea(s, "fila", 13);
+  ok(s.lineasConocidas.f13 === undefined, "sin conocimiento no se consulta");
+  s = M.consultarLinea({ ...s, conocimiento: 1 }, "fila", 7);
+  ok(s.conocimiento === 1, "una línea ya conocida no se cobra");
+  const marea = M.BIBLIOTECA.find((p) => p.nombre === "marea");
+  let s2 = { ...M.nuevaPartida(3, marea), conocimiento: 1 };
+  s2 = M.consultarLinea(s2, "fila", 1);
+  ok(s2.lineasConocidas.f1.modo === "alterna" && s2.lineasConocidas.f1.glifo === "⇄", "describe una fila que alterna");
 }
 
 // 5. atajo atraviesa una pared

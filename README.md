@@ -31,6 +31,7 @@ El material de la fase está en [`fase-0/`](fase-0/):
 
 - [docs/01-mapeo-del-juego.md](docs/01-mapeo-del-juego.md): concepto, pilares, sistemas y cómo se conectan entre sí.
 - [docs/02-ruta-de-desarrollo.md](docs/02-ruta-de-desarrollo.md): fases, alcance de cada una, puertas de decisión y riesgos.
+- [docs/03-biblioteca-de-reglas.md](docs/03-biblioteca-de-reglas.md): los doce patrones de giro del laberinto y cómo se aprenden.
 
 ## Cómo seguir el avance
 

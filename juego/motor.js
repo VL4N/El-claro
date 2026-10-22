@@ -20,10 +20,6 @@ export const CORREDORES_MAX = 6;
 export const COSTO_RECLUTA = { materiales: 3, comida: 2 };
 // lugar de cada corredor en la plaza cuando está en la ciudad
 export const casa = (id) => ({ x: 6 + (id % 3), y: 6 + Math.floor(id / 3) % 3 });
-const FILAS_DERECHA = [1, 3, 5];     // filas (base 0) que giran a la derecha: mitad norte
-const FILAS_IZQUIERDA = [9, 11, 13]; // filas que giran a la izquierda: mitad sur
-export const FILAS_MOVILES = new Set([...FILAS_DERECHA, ...FILAS_IZQUIERDA]);
-
 // ---------- azar determinista ----------
 export function crearRng(semilla) {
   let a = semilla >>> 0;
@@ -49,18 +45,84 @@ function ponerCelda(mapa, x, y, ch) {
   return copia;
 }
 
-// ---------- cambio del laberinto ----------
-export function desplazarMapa(mapa) {
-  return mapa.map((fila, y) => {
-    if (FILAS_DERECHA.includes(y)) return fila[fila.length - 1] + fila.slice(0, -1);
-    if (FILAS_IZQUIERDA.includes(y)) return fila.slice(1) + fila[0];
-    return fila;
-  });
+// ---------- biblioteca de reglas ----------
+// Un patrón es una lista de líneas (filas o columnas) y cómo se mueven en cada giro.
+//   tipo: "fila" | "columna"; indice: base 0; dir: +1 (derecha/abajo) o -1 (izquierda/arriba)
+//   modo: "fijo" (cada giro), "alterna" (cambia de sentido cada giro), "cada2" (solo en giros pares)
+// Las filas 6, 7 y 8 y las columnas 6, 7 y 8 nunca se mueven: ahí está la ciudad.
+const F = (indice, dir, modo = "fijo") => ({ tipo: "fila", indice, dir, modo });
+const C = (indice, dir, modo = "fijo") => ({ tipo: "columna", indice, dir, modo });
+
+export const BIBLIOTECA = [
+  { nombre: "norte y sur", dificultad: 1, pista: "las filas pares del norte van hacia un lado y las del sur hacia el otro",
+    lineas: [F(1, 1), F(3, 1), F(5, 1), F(9, -1), F(11, -1), F(13, -1)] },
+  { nombre: "corriente", dificultad: 1, pista: "todas las filas pares van al mismo lado",
+    lineas: [F(1, 1), F(3, 1), F(5, 1), F(9, 1), F(11, 1), F(13, 1)] },
+  { nombre: "espejo", dificultad: 1, pista: "como norte y sur, pero al revés",
+    lineas: [F(1, -1), F(3, -1), F(5, -1), F(9, 1), F(11, 1), F(13, 1)] },
+  { nombre: "anillos", dificultad: 2, pista: "las filas se alternan según su distancia a la ciudad",
+    lineas: [F(1, 1), F(3, -1), F(5, 1), F(9, 1), F(11, -1), F(13, 1)] },
+  { nombre: "cascada", dificultad: 2, pista: "aquí lo que se mueve son columnas, no filas",
+    lineas: [C(1, 1), C(3, 1), C(5, 1), C(9, -1), C(11, -1), C(13, -1)] },
+  { nombre: "cruz", dificultad: 2, pista: "dos filas y dos columnas, nada más",
+    lineas: [F(3, 1), F(11, 1), C(3, 1), C(11, 1)] },
+  { nombre: "marea", dificultad: 3, pista: "las filas van y vuelven: un giro hacia un lado, el siguiente hacia el otro",
+    lineas: [F(1, 1, "alterna"), F(3, 1, "alterna"), F(5, 1, "alterna"), F(9, -1, "alterna"), F(11, -1, "alterna"), F(13, -1, "alterna")] },
+  { nombre: "lento", dificultad: 3, pista: "solo se mueve en giros pares",
+    lineas: [F(1, 1, "cada2"), F(5, 1, "cada2"), F(9, -1, "cada2"), F(13, -1, "cada2")] },
+  { nombre: "borde", dificultad: 3, pista: "el borde del laberinto gira como una rueda",
+    lineas: [F(0, 1), C(14, 1), F(14, -1), C(0, -1)] },
+  { nombre: "mixto", dificultad: 4, pista: "algunas filas y algunas columnas, con comportamientos distintos",
+    lineas: [F(1, 1), F(3, 1), C(11, -1, "alterna"), C(13, -1, "alterna")] },
+  { nombre: "respiración", dificultad: 4, pista: "las filas cercanas a la ciudad van y vuelven; las lejanas, solo a veces",
+    lineas: [F(5, 1, "alterna"), F(9, -1, "alterna"), F(1, 1, "cada2"), F(13, -1, "cada2")] },
+  { nombre: "remolino", dificultad: 5, pista: "filas y columnas, en sentidos cruzados y con ritmo propio",
+    lineas: [F(2, 1, "alterna"), F(12, -1, "alterna"), C(2, -1), C(12, 1), F(5, 1, "cada2"), F(9, -1, "cada2")] },
+];
+
+export function elegirPatron(rng) {
+  return BIBLIOTECA[Math.floor(rng() * BIBLIOTECA.length)];
 }
 
-export function desplazarCoord(x, y) {
-  if (FILAS_DERECHA.includes(y)) return { x: (x + 1) % ANCHO, y };
-  if (FILAS_IZQUIERDA.includes(y)) return { x: (x + ANCHO - 1) % ANCHO, y };
+// Desplazamiento real de una línea en el giro número `giro` (el primero es 1). 0 si no se mueve.
+export function pasoLinea(linea, giro) {
+  if (linea.modo === "alterna") return giro % 2 === 1 ? linea.dir : -linea.dir;
+  if (linea.modo === "cada2") return giro % 2 === 0 ? linea.dir : 0;
+  return linea.dir;
+}
+
+export function lineaDePatron(patron, tipo, indice) {
+  return patron.lineas.find((l) => l.tipo === tipo && l.indice === indice) || null;
+}
+
+function rotarTexto(fila, paso) {
+  const n = fila.length; const k = ((paso % n) + n) % n;
+  return k ? fila.slice(n - k) + fila.slice(0, n - k) : fila;
+}
+
+// ---------- cambio del laberinto ----------
+export function desplazarMapa(mapa, patron, giro) {
+  let m = mapa.slice();
+  for (const l of patron.lineas) {
+    const paso = pasoLinea(l, giro);
+    if (!paso) continue;
+    if (l.tipo === "fila") m[l.indice] = rotarTexto(m[l.indice], paso);
+    else {
+      const col = m.map((f) => f[l.indice]).join("");
+      const nueva = rotarTexto(col, paso);
+      m = m.map((f, y) => f.slice(0, l.indice) + nueva[y] + f.slice(l.indice + 1));
+    }
+  }
+  return m;
+}
+
+export function desplazarCoord(x, y, patron, giro) {
+  for (const l of patron.lineas) {
+    const paso = pasoLinea(l, giro);
+    if (!paso) continue;
+    if (l.tipo === "fila" && l.indice === y) x = (x + paso + ANCHO) % ANCHO;
+    else if (l.tipo === "columna" && l.indice === x) y = (y + paso + ALTO) % ALTO;
+  }
   return { x, y };
 }
 
@@ -151,12 +213,12 @@ function colocar(mapa, rng, ch, cantidad, filtro) {
   return m;
 }
 
-export function evaluarMapa(mapa) {
+export function evaluarMapa(mapa, patron) {
   const estados = [];
   let m = mapa;
   for (let i = 0; i <= Math.floor(TURNOS_MAX / CICLO); i++) {
     estados.push(m);
-    m = desplazarMapa(m);
+    m = desplazarMapa(m, patron, i + 1);
   }
   const origen = { x: 7, y: 7 };
   const resumen = estados.map((e) => {
@@ -182,8 +244,9 @@ export function evaluarMapa(mapa) {
   return { valido, salidaAbierta, resumen };
 }
 
-export function generarMapa(semilla) {
+export function generarMapa(semilla, patronFijo = null) {
   const rng = crearRng(semilla);
+  const patron = patronFijo || elegirPatron(rng);
   for (let intento = 0; intento < 3000; intento++) {
     let m = mapaAleatorio(rng);
     // la salida va en un borde, lejos del centro
@@ -195,7 +258,7 @@ export function generarMapa(semilla) {
     const lejos = (x, y) => Math.abs(x - 7) + Math.abs(y - 7) >= 3;
     m = colocar(m, rng, "M", 10, lejos);
     m = colocar(m, rng, "K", 6, lejos);
-    if (evaluarMapa(m).valido) return { mapa: m, intentos: intento + 1 };
+    if (evaluarMapa(m, patron).valido) return { mapa: m, patron, intentos: intento + 1 };
   }
   return null;
 }
@@ -204,8 +267,8 @@ export function generarMapa(semilla) {
 export const VISION = 1;            // radio de visión de un corredor (celdas, en cuadrado)
 export const VISION_CIUDAD = 1;     // anillo visible alrededor de la ciudad
 
-export function nuevaPartida(semilla = Date.now() % 1000000) {
-  const gen = generarMapa(semilla);
+export function nuevaPartida(semilla = Date.now() % 1000000, patronFijo = null) {
+  const gen = generarMapa(semilla, patronFijo);
   if (!gen) throw new Error("No se pudo generar un mapa válido con la semilla " + semilla);
   const conocido = Array.from({ length: ALTO }, () => "?".repeat(ANCHO));
   const vistoEn = Array.from({ length: ALTO }, () => new Array(ANCHO).fill(-1));
@@ -214,12 +277,12 @@ export function nuevaPartida(semilla = Date.now() % 1000000) {
     estado: "ciudad", atajo: false,
   }));
   const s = {
-    semilla, turno: 1, mapa: gen.mapa, conocido, vistoEn, giro: 0,
+    semilla, turno: 1, mapa: gen.mapa, patron: gen.patron, conocido, vistoEn, giro: 0,
     comida: 14, materiales: 0, conocimiento: 0, hambre: 0, marcas: 0,
     huertos: 0, taller: false,
     corredores, salidaAlcanzada: false, salidaConocida: false,
     conocidoAnterior: null, cambiosGiro: [], cambiosEn: -100,
-    filasConocidas: {},   // fila (base 0) -> "derecha" | "izquierda" | "quieta", lo que la sala de mapas confirmó
+    lineasConocidas: {},  // "f3" o "c5" -> lo que la sala de mapas confirmó
     registro: [`El Claro despierta. Nadie sabe dónde está la salida: las marcas (K) del laberinto la señalan. Hacen falta ${MARCAS_PARA_SALIR}.`],
     fin: null,
   };
@@ -296,19 +359,29 @@ export function reclutar(s) {
 
 // ---------- sala de mapas ----------
 export const COSTO_CONSULTA = 1;
-export function comportamientoFila(y) {
-  if (FILAS_DERECHA.includes(y)) return "derecha";
-  if (FILAS_IZQUIERDA.includes(y)) return "izquierda";
-  return "quieta";
+export const claveLinea = (tipo, indice) => (tipo === "fila" ? "f" : "c") + indice;
+export const nombreLinea = (tipo, indice) => tipo === "fila" ? `fila ${indice + 1}` : `columna ${"ABCDEFGHIJKLMNO"[indice]}`;
+
+// Describe lo que hace una línea: { glifo, texto, dir, modo }
+export function comportamientoLinea(patron, tipo, indice) {
+  const l = lineaDePatron(patron, tipo, indice);
+  const h = tipo === "fila";
+  if (!l) return { modo: "quieta", dir: 0, glifo: "•", texto: "no se mueve nunca" };
+  const lado = (d) => h ? (d > 0 ? "derecha" : "izquierda") : (d > 0 ? "abajo" : "arriba");
+  if (l.modo === "alterna") return { modo: l.modo, dir: l.dir, glifo: h ? "⇄" : "⇅", texto: `va y vuelve: un giro hacia la ${lado(l.dir)}, el siguiente hacia la ${lado(-l.dir)}` };
+  const flecha = h ? (l.dir > 0 ? "→" : "←") : (l.dir > 0 ? "↓" : "↑");
+  if (l.modo === "cada2") return { modo: l.modo, dir: l.dir, glifo: flecha + "₂", texto: `se desplaza una celda hacia la ${lado(l.dir)}, pero solo en los giros pares` };
+  return { modo: l.modo, dir: l.dir, glifo: flecha, texto: `se desplaza una celda hacia la ${lado(l.dir)} en cada giro` };
 }
-export function consultarFila(s, y) {
-  if (s.fin || !enTablero(0, y)) return s;
-  if (s.filasConocidas[y]) return s;
+
+export function consultarLinea(s, tipo, indice) {
+  if (s.fin || indice < 0 || indice >= ANCHO) return s;
+  const k = claveLinea(tipo, indice);
+  if (s.lineasConocidas[k]) return s;
   if (s.conocimiento < COSTO_CONSULTA) return s;
-  const r = comportamientoFila(y);
-  const texto = { derecha: "se desplaza una celda a la derecha en cada giro", izquierda: "se desplaza una celda a la izquierda en cada giro", quieta: "no se mueve nunca" }[r];
-  return log({ ...s, conocimiento: s.conocimiento - COSTO_CONSULTA, filasConocidas: { ...s.filasConocidas, [y]: r } },
-    `Sala de mapas: la fila ${y + 1} ${texto}.`);
+  const r = comportamientoLinea(s.patron, tipo, indice);
+  return log({ ...s, conocimiento: s.conocimiento - COSTO_CONSULTA, lineasConocidas: { ...s.lineasConocidas, [k]: { tipo, indice, ...r } } },
+    `Sala de mapas: la ${nombreLinea(tipo, indice)} ${r.texto}.`);
 }
 
 export function enviar(s, id, destino, raciones) {
@@ -473,10 +546,11 @@ export function avanzar(s) {
   s = revelar({ ...s, corredores });
   // 4. ciclo
   if (s.turno % CICLO === 0) {
-    const mapa = desplazarMapa(s.mapa);
+    const giroNum = s.giro + 1;
+    const mapa = desplazarMapa(s.mapa, s.patron, giroNum);
     corredores = s.corredores.map((c) => {
       if (c.estado !== "fuera") return c;
-      const p = desplazarCoord(c.x, c.y);
+      const p = desplazarCoord(c.x, c.y, s.patron, giroNum);
       return { ...c, x: p.x, y: p.y };
     });
     const anterior = s.conocido;

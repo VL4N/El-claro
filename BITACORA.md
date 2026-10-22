@@ -8,6 +8,30 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-22 · Sesión 11: biblioteca de reglas y pestañas
+
+**Hecho**
+
+- Biblioteca de doce patrones de giro, de dificultad 1 a 5, documentada en `docs/03-biblioteca-de-reglas.md`. Cada partida elige uno según la semilla.
+- El motor ya no tiene la regla fija: un patrón es una lista de líneas (filas o columnas) con sentido y ritmo (fijo, alterna, cada dos). Pruebas para los doce: la ciudad nunca se mueve, el mapa no se rompe, los corredores siguen a su celda, y se genera un mapa válido con cada uno.
+- La sala de mapas ahora pregunta por filas y columnas, y describe ritmos: "va y vuelve", "solo en giros pares".
+- Interfaz en pestañas (Ciudad, Mapas, Registro, Ayuda) debajo de las órdenes. Tablero, corredores y órdenes caben en una pantalla de celular.
+
+**Decidido**
+
+- **Un patrón por partida, elegido al azar entre los doce.** Motivo: es lo más simple que hace que cada partida sea distinta. La ruta hablaba de componer 3 a 5 reglas; se deja para cuando se vea cómo se aprenden los patrones de a uno.
+- **Las columnas también pueden moverse.** Motivo: amplía mucho el espacio de patrones sin agregar conceptos: la misma idea, en el otro eje.
+- **Tres ritmos: fijo, alterna y cada dos.** Motivo: son los que se pueden descubrir comparando dos o tres giros seguidos. Ritmos más largos exigirían el historial de varios giros, que todavía no existe.
+- **Lo que no está a la vista no se mueve de lugar en el mapa conocido.** Sigue igual que antes: la memoria del jugador no se actualiza sola. Motivo: si el mapa conocido siguiera el patrón, el juego estaría resolviendo el misterio por el jugador.
+- **Pestañas en vez de una página larga.** Pedido del autor: "no me da la pantalla para subir y bajar mientras el tiempo corre". Motivo: en tiempo real, lo que se necesita para decidir tiene que estar a la vista sin scroll. Construcción, mapas, registro y ayuda se abren solo cuando se necesitan.
+
+**Siguiente**
+
+- Que el autor juegue partidas con patrones distintos y diga si llega a identificar alguno.
+- Historial de varios giros y pistas en palabras en las marcas.
+
+---
+
 ## 2026-10-22 · Sesión 10: giros cada minuto
 
 **Decidido**
