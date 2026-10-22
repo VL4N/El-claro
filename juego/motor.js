@@ -7,7 +7,14 @@ export const ALTO = 15;
 export const TICK_ECONOMIA = 6;    // cada cuántos ticks la ciudad produce y consume, y los corredores gastan una ración
 export const CICLO = 60;           // cada cuántos ticks gira el laberinto (un minuto)
 export const TURNOS_MAX = 480;     // duración de la partida en ticks (8 minutos)
-export const CAPACIDAD = 3;        // materiales que carga un corredor
+export const CAPACIDAD = 3;        // materiales que carga un corredor sin atributo especial
+export const TICKS_CAIDO = 60;     // tiempo para rescatar a un corredor caído antes de que muera
+export const TICKS_HERIDO = 60;    // recuperación de un herido sin enfermería
+export const TICKS_HERIDO_ENFERMERIA = 30;
+export const COSTO_ENFERMERIA = 4;
+export const COSTO_MEJORA = 2;     // conocimiento para mejorar un atributo
+export const TICKS_LUTO = 60;      // un corredor de luto no sale
+export const TICKS_ENCIERRO = 30;  // evento de facción: nadie sale
 export const COSTO_HUERTO = 4;
 export const COSTO_TALLER = 5;
 export const COSTO_ATAJO = 2;      // conocimiento para atravesar una pared
@@ -15,7 +22,49 @@ export const PUNTOS_SALIDA = 10;
 export const RACIONES_MAX = 10;
 export const MARCAS_PARA_SALIR = 4;   // marcas leídas que hacen falta para que la salida se abra
 
-const NOMBRES = ["Ira", "Teo", "Noa", "Sol", "Bru", "Lía", "Eli", "Dan", "Uma"];
+const NOMBRES = ["Ira", "Teo", "Noa", "Sol", "Bru", "Lía", "Eli", "Dan", "Uma", "Rai", "Vera", "Nilo", "Ada", "Tomé", "Luz",
+  "Cai", "Mara", "Iván", "Ona", "Rufo", "Sira", "Beni", "Zoe", "Lalo", "Nila", "Gael", "Pía", "Koa", "Dalia", "Ciro"];
+
+// ---------- quién es cada corredor ----------
+export const FUERTES = {
+  rapido: { nombre: "rápido", velocidad: 2, fuerza: 2, ojo: 1, frase: "Corre más que nadie, pero carga poco." },
+  fuerte: { nombre: "fuerte", velocidad: 1, fuerza: 5, ojo: 1, frase: "Carga casi el doble que los demás." },
+  ojo: { nombre: "buen ojo", velocidad: 1, fuerza: 3, ojo: 2, frase: "Ve más lejos: destapa el doble de laberinto a su paso." },
+  comun: { nombre: "sin destacar", velocidad: 1, fuerza: 3, ojo: 1, frase: "No destaca en nada y no falla en nada." },
+};
+const ORIGENES = [
+  "Nació en El Claro y nunca vio el cielo abierto.", "Llegó de niño con la última generación que intentó salir.",
+  "Aprendió a leer con las marcas de los muros.", "Cuida el huerto cuando no sale.",
+  "Dice que oye girar el laberinto por las noches.", "Dibuja mapas de memoria en la pared de su casa.",
+  "No habla de lo que vio en su primera expedición.", "Es quien más veces ha vuelto con las manos vacías, y sigue saliendo.",
+  "Repara las herramientas del taller.", "Cuenta historias de la salida a los más chicos.",
+  "Perdió a alguien en el laberinto y no lo nombra.", "Guarda una piedra de cada expedición.",
+];
+const PARENTESCOS = ["hermana", "hermano", "pareja", "amiga de infancia", "amigo de infancia", "madre", "padre", "hija", "hijo", "prima", "primo"];
+
+export function crearCorredor(id, rng, existentes, fuerteId = null, forzarVinculo = false) {
+  const claves = Object.keys(FUERTES);
+  const fuerte = fuerteId || claves[Math.floor(rng() * claves.length)];
+  const f = FUERTES[fuerte];
+  let vinculo = null;
+  const vivos = existentes.filter((c) => c.estado !== "muerto" && c.estado !== "ido");
+  if (vivos.length && (forzarVinculo || rng() < 0.65)) {
+    const otro = vivos[Math.floor(rng() * vivos.length)];
+    vinculo = { id: otro.id, texto: `${PARENTESCOS[Math.floor(rng() * PARENTESCOS.length)]} de ${otro.nombre}` };
+  }
+  const origen = ORIGENES[Math.floor(rng() * ORIGENES.length)];
+  const historia = [f.frase, vinculo ? `${origen} Es ${vinculo.texto}.` : origen];
+  return {
+    id, nombre: NOMBRES[id % NOMBRES.length], ...casa(id), raciones: 0, carga: 0, destino: null, estado: "ciudad", atajo: false,
+    fuerte, velocidad: f.velocidad, fuerza: f.fuerza, ojo: f.ojo, historia, vinculo,
+    lleva: null, caidoEn: null, heridoEn: null, lutoHasta: 0,
+  };
+}
+
+// Están unidos si uno es vínculo del otro.
+export function unidos(a, b) {
+  return (a.vinculo && a.vinculo.id === b.id) || (b.vinculo && b.vinculo.id === a.id);
+}
 export const CORREDORES_MAX = 6;
 export const COSTO_RECLUTA = { materiales: 3, comida: 2 };
 // lugar de cada corredor en la plaza cuando está en la ciudad
@@ -300,16 +349,19 @@ export function nuevaPartida(semilla = Date.now() % 1000000, patronFijo = null, 
   if (!gen) throw new Error("No se pudo generar un mapa válido con la semilla " + semilla);
   const conocido = Array.from({ length: ALTO }, () => "?".repeat(ANCHO));
   const vistoEn = Array.from({ length: ALTO }, () => new Array(ANCHO).fill(-1));
-  const corredores = NOMBRES.slice(0, 3).map((nombre, i) => ({
-    id: i, nombre, ...casa(i), raciones: 0, carga: 0, destino: null,
-    estado: "ciudad", atajo: false,
-  }));
+  const rngGente = crearRng(semilla + 99);
+  const fuertes = ["rapido", "fuerte", "ojo"];
+  for (let i = 2; i > 0; i--) { const j = Math.floor(rngGente() * (i + 1)); [fuertes[i], fuertes[j]] = [fuertes[j], fuertes[i]]; }
+  const corredores = [];
+  for (let i = 0; i < 3; i++) corredores.push(crearCorredor(i, rngGente, corredores, fuertes[i], i === 2));
   const s = {
     semilla, turno: 1, mapa: gen.mapa, patron: gen.patron, conocido, vistoEn, giro: 0,
     pistas: pistasDePatron(gen.patron, crearRng(semilla + 7)), pistasLeidas: [],
     historial: [],        // un registro por giro: { giro, antes, despues, cambios }
     comida: 14, materiales: 0, conocimiento: 0, hambre: 0, marcas: 0,
-    huertos: 0, taller: false,
+    huertos: 0, taller: false, enfermeria: false,
+    balance: 0,           // facciones: -10 (quedarse) a +10 (salir)
+    eventos: [], eventosDisparados: [], encierroHasta: 0, pendientes: [],
     corredores, salidaAlcanzada: false, salidaConocida: false,
     conocidoAnterior: null, cambiosGiro: [], cambiosEn: -100,
     lineasConocidas: {},  // "f3" o "c5" -> lo que la sala de mapas confirmó
@@ -334,7 +386,7 @@ export function revelar(s) {
     }
   };
   ver(7, 7, 1 + VISION_CIUDAD);
-  for (const c of s.corredores) if (c.estado === "fuera") ver(c.x, c.y, VISION);
+  for (const c of s.corredores) if (c.estado === "fuera") ver(c.x, c.y, c.ojo || VISION);
   return { ...s, conocido: conocido.map((f) => f.join("")), vistoEn };
 }
 
@@ -342,7 +394,7 @@ export function visibleAhora(s) {
   const v = new Set();
   const marcar = (cx, cy, r) => { for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) if (enTablero(x, y)) v.add(y * ANCHO + x); };
   marcar(7, 7, 1 + VISION_CIUDAD);
-  for (const c of s.corredores) if (c.estado === "fuera") marcar(c.x, c.y, VISION);
+  for (const c of s.corredores) if (c.estado === "fuera") marcar(c.x, c.y, c.ojo || VISION);
   return v;
 }
 
@@ -357,6 +409,8 @@ export function revelarTodo(s) {
 const log = (s, texto) => ({ ...s, registro: [...s.registro, texto] });
 
 export function velocidad(s) { return s.taller ? 2 : 1; }
+export function velocidadDe(s, c) { return (c && c.velocidad ? c.velocidad : 1) + (s.taller ? 1 : 0); }
+export const activo = (c) => c.estado === "ciudad" || c.estado === "fuera" || c.estado === "herido" || c.estado === "caido" || c.estado === "llevado";
 export function produccion(s) { return 3 + 2 * s.huertos; }
 export const CONSUMO = 2;
 
@@ -365,27 +419,89 @@ export function construir(s, que) {
   if (s.fin) return s;
   if (que === "huerto") {
     if (s.materiales < COSTO_HUERTO) return s;
-    return log({ ...s, materiales: s.materiales - COSTO_HUERTO, huertos: s.huertos + 1 },
-      `Se construye un huerto. Producción: ${produccion(s) + 2} comida por turno.`);
+    return ajustarBalance(log({ ...s, materiales: s.materiales - COSTO_HUERTO, huertos: s.huertos + 1 },
+      `Se construye un huerto. Producción: ${produccion(s) + 2} comida por periodo.`), -1);
   }
   if (que === "taller") {
     if (s.taller || s.materiales < COSTO_TALLER) return s;
     return log({ ...s, materiales: s.materiales - COSTO_TALLER, taller: true },
-      `Se construye el taller. Los corredores ahora caminan el doble de rápido: 2 celdas por segundo. Los viajes duran la mitad y necesitan menos raciones.`);
+      `Se construye el taller. Los corredores caminan una celda más por segundo. Los viajes duran menos y necesitan menos raciones.`);
+  }
+  if (que === "enfermeria") {
+    if (s.enfermeria || s.materiales < COSTO_ENFERMERIA) return s;
+    return ajustarBalance(log({ ...s, materiales: s.materiales - COSTO_ENFERMERIA, enfermeria: true },
+      `Se construye la enfermería. Los heridos se recuperan en la mitad de tiempo.`), -1);
+  }
+  return s;
+}
+// ---------- facciones ----------
+export const EVENTOS = {
+  impaciencia: { umbral: 5, titulo: "Impaciencia", texto: "Los que quieren salir ya no esperan órdenes. Uno de los corredores se marcha solo, con tres raciones, hacia lo desconocido." },
+  exodo: { umbral: 9, titulo: "Éxodo", texto: "Un grupo decide que la salida no vale la espera y se va de la ciudad para siempre. Un corredor se va con ellos." },
+  miedo: { umbral: -5, titulo: "Miedo", texto: "Los que quieren quedarse esconden comida por si llega lo peor. La ciudad pierde 3 de comida." },
+  encierro: { umbral: -9, titulo: "Encierro", texto: "Los que quieren quedarse cierran las puertas. Durante 30 segundos nadie sale de la ciudad." },
+};
+
+export function ajustarBalance(s, delta) {
+  const balance = Math.max(-10, Math.min(10, s.balance + delta));
+  s = { ...s, balance };
+  for (const [id, ev] of Object.entries(EVENTOS)) {
+    if (s.eventosDisparados.includes(id)) continue;
+    if ((ev.umbral > 0 && balance >= ev.umbral) || (ev.umbral < 0 && balance <= ev.umbral)) s = dispararEvento(s, id);
   }
   return s;
 }
 
+function dispararEvento(s, id) {
+  const ev = EVENTOS[id];
+  s = { ...s, eventosDisparados: [...s.eventosDisparados, id], eventos: [...s.eventos, { id, turno: s.turno, titulo: ev.titulo, texto: ev.texto }] };
+  s = log(s, `${ev.titulo}: ${ev.texto}`);
+  const enCasa = s.corredores.filter((c) => c.estado === "ciudad" && c.lutoHasta <= s.turno);
+  if (id === "impaciencia" && enCasa.length) {
+    const c = enCasa[Math.floor(hash(s.semilla, s.turno, 1) % enCasa.length)];
+    const plan = mapaPlan(s);
+    const lejos = [];
+    for (let y = 0; y < ALTO; y++) for (let x = 0; x < ANCHO; x++) if (s.conocido[y][x] === "?" && Math.abs(x - 7) + Math.abs(y - 7) >= 5) lejos.push({ x, y });
+    const destino = lejos.length ? lejos[hash(s.semilla, s.turno, 2) % lejos.length] : null;
+    const salida = destino && celdaCiudadMasCercana(plan, destino);
+    if (salida) {
+      const raciones = Math.min(3, s.comida);
+      s = { ...s, comida: s.comida - raciones, corredores: s.corredores.map((k) => k.id === c.id ? { ...k, x: salida.x, y: salida.y, raciones: Math.max(1, raciones), destino, estado: "fuera" } : k) };
+      s = log(s, `${c.nombre} se va por su cuenta hacia ${coord(destino)}.`);
+    }
+  }
+  if (id === "exodo" && enCasa.length) {
+    const c = enCasa[Math.floor(hash(s.semilla, s.turno, 3) % enCasa.length)];
+    s = { ...s, corredores: s.corredores.map((k) => k.id === c.id ? { ...k, estado: "ido", destino: null } : k) };
+    s = log(s, `${c.nombre} se va de la ciudad. No vuelve.`);
+  }
+  if (id === "miedo") s = { ...s, comida: Math.max(0, s.comida - 3) };
+  if (id === "encierro") s = { ...s, encierroHasta: s.turno + TICKS_ENCIERRO };
+  return s;
+}
+
+export function mejorar(s, id, atributo) {
+  if (s.fin) return s;
+  const c = s.corredores[id];
+  if (!c || c.estado !== "ciudad" || s.conocimiento < COSTO_MEJORA) return s;
+  const topes = { velocidad: 2, fuerza: 5, ojo: 2 };
+  if (!(atributo in topes) || c[atributo] >= topes[atributo]) return s;
+  const nombres = { velocidad: "velocidad", fuerza: "carga", ojo: "vista" };
+  return log({ ...s, conocimiento: s.conocimiento - COSTO_MEJORA,
+    corredores: s.corredores.map((k) => k.id === id ? { ...k, [atributo]: k[atributo] + 1 } : k) },
+    `${c.nombre} estudia las marcas y mejora su ${nombres[atributo]}.`);
+}
+
 export function reclutar(s) {
   if (s.fin) return s;
-  const vivos = s.corredores.filter((c) => c.estado !== "perdido" && c.estado !== "salio").length;
+  const vivos = s.corredores.filter(activo).length;
   if (vivos >= CORREDORES_MAX) return s;
   if (s.materiales < COSTO_RECLUTA.materiales || s.comida < COSTO_RECLUTA.comida) return s;
   const id = s.corredores.length;
   if (id >= NOMBRES.length) return s;
-  const nuevo = { id, nombre: NOMBRES[id], ...casa(id), raciones: 0, carga: 0, destino: null, estado: "ciudad", atajo: false };
-  return log({ ...s, materiales: s.materiales - COSTO_RECLUTA.materiales, comida: s.comida - COSTO_RECLUTA.comida,
-    corredores: [...s.corredores, nuevo] }, `${nuevo.nombre} se une a los corredores.`);
+  const nuevo = crearCorredor(id, crearRng(s.semilla * 13 + id), s.corredores);
+  return ajustarBalance(log({ ...s, materiales: s.materiales - COSTO_RECLUTA.materiales, comida: s.comida - COSTO_RECLUTA.comida,
+    corredores: [...s.corredores, nuevo] }, `${nuevo.nombre} se une a los corredores. ${nuevo.historia[0]}`), 1);
 }
 
 // ---------- sala de mapas ----------
@@ -483,6 +599,7 @@ export function enviar(s, id, destino, raciones) {
   if (s.fin) return s;
   const c = s.corredores[id];
   if (c.estado !== "ciudad") return s;
+  if (c.lutoHasta > s.turno || s.encierroHasta > s.turno) return s;
   const plan = mapaPlan(s);
   if (!pasable(plan, destino.x, destino.y) || celda(plan, destino.x, destino.y) === "C") return s;
   raciones = Math.max(1, Math.min(RACIONES_MAX, raciones | 0));
@@ -490,8 +607,8 @@ export function enviar(s, id, destino, raciones) {
   const salida = celdaCiudadMasCercana(plan, destino);
   if (!salida) return s;
   const corredores = s.corredores.map((k) => k.id === id ? { ...k, x: salida.x, y: salida.y, raciones, destino, estado: "fuera" } : k);
-  return log({ ...s, comida: s.comida - raciones, corredores },
-    `${c.nombre} sale con ${raciones} ${raciones === 1 ? "ración" : "raciones"}.`);
+  return ajustarBalance(log({ ...s, comida: s.comida - raciones, corredores },
+    `${c.nombre} sale con ${raciones} ${raciones === 1 ? "ración" : "raciones"}.`), 1);
 }
 
 export function cambiarDestino(s, id, destino) {
@@ -522,8 +639,10 @@ function entrar(s, c) {
   const texto = c.carga > 0
     ? `${c.nombre} vuelve a la ciudad y deposita ${c.carga} ${c.carga === 1 ? "material" : "materiales"}.`
     : `${c.nombre} vuelve a la ciudad.`;
-  const k = { ...c, ...casa(c.id), carga: 0, estado: "ciudad", destino: null, raciones: 0, atajo: false };
-  return log({ ...s, materiales: s.materiales + c.carga, corredores: s.corredores.map((q) => q.id === c.id ? k : q) }, texto);
+  const k = { ...c, ...casa(c.id), carga: 0, estado: "ciudad", destino: null, raciones: 0, atajo: false, lleva: null };
+  let out = log({ ...s, materiales: s.materiales + c.carga, corredores: s.corredores.map((q) => q.id === c.id ? k : q) }, texto);
+  if (c.lleva !== null) out = { ...out, pendientes: [...out.pendientes, { tipo: "herido", id: c.lleva }] };
+  return out;
 }
 
 // ---------- fin de turno ----------
@@ -538,12 +657,13 @@ function moverCorredor(s, c) {
   if (!ruta) {
     return { s: log(s, `${c.nombre} no encuentra camino hacia ${coord(c.destino)} con lo que se sabe del laberinto. Espera.`), c };
   }
-  let pasos = Math.min(velocidad(s), ruta.length);
+  let pasos = Math.min(velocidadDe(s, c), ruta.length);
   let { x, y, carga, atajo } = c;
   let comida = s.comida, materiales = s.materiales, conocimiento = s.conocimiento, marcas = s.marcas;
   let registro = s.registro.slice();
   let salidaAlcanzada = s.salidaAlcanzada, salidaConocida = s.salidaConocida, pistasLeidas = s.pistasLeidas;
-  let estado = c.estado, destino = c.destino, raciones = c.raciones;
+  let estado = c.estado, destino = c.destino, raciones = c.raciones, lleva = c.lleva;
+  let marcaLeida = false, rescate = null;
   for (let i = 0; i < pasos; i++) {
     const p = ruta[i];
     const ch = mapa[p.y][p.x];
@@ -555,7 +675,7 @@ function moverCorredor(s, c) {
     x = p.x; y = p.y;
     if (ch === "M") {
       const n = 1 + (hash(s.semilla, s.turno, c.id, i) % 2);
-      const toma = Math.min(n, CAPACIDAD - carga);
+      const toma = Math.min(n, (c.fuerza || CAPACIDAD) - carga);
       carga += toma;
       mapa = ponerCelda(mapa, x, y, ".");
       registro.push(`${c.nombre} encuentra escombros en ${coord(p)}: ${toma} ${toma === 1 ? "material" : "materiales"}.${toma < n ? " No puede cargar más." : ""}`);
@@ -565,6 +685,7 @@ function moverCorredor(s, c) {
       const pista = s.pistas[pistasLeidas.length];
       if (pista) { pistasLeidas = [...pistasLeidas, pista]; registro.push(`La marca de ${coord(p)} dice: «${pista}».`); }
       const faltan = MARCAS_PARA_SALIR - marcas;
+      marcaLeida = true;
       if (faltan > 0) registro.push(`${c.nombre} lee una marca en ${coord(p)}: +1 conocimiento. Faltan ${faltan} para saber dónde está la salida.`);
       else if (!salidaConocida) {
         salidaConocida = true;
@@ -591,15 +712,20 @@ function moverCorredor(s, c) {
     else registro.push(`${c.nombre} vuelve a la ciudad.`);
     materiales += carga; carga = 0; estado = "ciudad"; raciones = 0; atajo = false;
   }
-  if (estado === "ciudad") { ({ x, y } = casa(c.id)); }
+  if (estado === "ciudad") {
+    ({ x, y } = casa(c.id));
+    if (lleva !== null) { rescate = lleva; lleva = null; }
+  }
   let sOut = { ...s, mapa, comida, materiales, conocimiento, marcas, registro, salidaAlcanzada, salidaConocida, pistasLeidas };
+  if (marcaLeida) sOut = ajustarBalance(sOut, 1);
+  if (rescate !== null) sOut = { ...sOut, pendientes: [...sOut.pendientes, { tipo: "herido", id: rescate }] };
   if (salidaConocida && !s.salidaConocida) {
     // la salida aparece en el mapa conocido
     const conocido = sOut.conocido.map((f) => f.split(""));
     for (let yy = 0; yy < ALTO; yy++) for (let xx = 0; xx < ANCHO; xx++) if (mapa[yy][xx] === "S") conocido[yy][xx] = "S";
     sOut = { ...sOut, conocido: conocido.map((f) => f.join("")) };
   }
-  return { s: sOut, c: { ...c, x, y, carga, atajo, estado, destino, raciones } };
+  return { s: sOut, c: { ...c, x, y, carga, atajo, estado, destino, raciones, lleva } };
 }
 
 function hash(...nums) {
@@ -630,15 +756,55 @@ export function avanzar(s) {
     const r = moverCorredor(s, corredores[i]);
     s = r.s; corredores[i] = r.c;
   }
+  // 2b. rescates: un corredor que pasa por donde cayó otro lo levanta y lo lleva
+  corredores = corredores.map((c) => ({ ...c }));
+  for (const c of corredores) {
+    if (c.estado !== "fuera" || c.lleva !== null) continue;
+    const caido = corredores.find((k) => k.estado === "caido" && k.x === c.x && k.y === c.y);
+    if (caido) {
+      c.lleva = caido.id; caido.estado = "llevado"; caido.destino = null;
+      s = ajustarBalance(log(s, `${c.nombre} encuentra a ${caido.nombre} en ${coord(c)} y lo carga de vuelta.`), 1);
+    }
+  }
+  // los llevados van donde va quien los lleva
+  for (const c of corredores) if (c.lleva !== null) { const k = corredores.find((q) => q.id === c.lleva); if (k) { k.x = c.x; k.y = c.y; } }
+  // llegados a la ciudad con alguien a cuestas: el rescatado queda herido
+  for (const pend of s.pendientes) {
+    if (pend.tipo !== "herido") continue;
+    const k = corredores.find((q) => q.id === pend.id);
+    if (k && k.estado === "llevado") { Object.assign(k, { estado: "herido", heridoEn: s.turno, ...casa(k.id), raciones: 0, carga: 0 }); s = log(s, `${k.nombre} llega a la enfermería. Se recupera en ${s.enfermeria ? TICKS_HERIDO_ENFERMERIA : TICKS_HERIDO} s.`); }
+  }
+  s = { ...s, pendientes: [] };
   // 3. raciones
   corredores = corredores.map((c) => {
     if (c.estado !== "fuera" || !economia) return c;
     const raciones = c.raciones - 1;
     if (raciones <= 0) {
-      s = log(s, `${c.nombre} se queda sin raciones en ${coord(c)}. Se pierde en el laberinto.`);
-      return { ...c, raciones: 0, estado: "perdido", destino: null };
+      s = log(s, `${c.nombre} se queda sin raciones en ${coord(c)} y cae. Alguien tiene ${TICKS_CAIDO} s para llegar hasta ${c.nombre === "Ira" ? "ella" : "él o ella"}.`);
+      return { ...c, raciones: 0, estado: "caido", caidoEn: s.turno, destino: null };
     }
     return { ...c, raciones };
+  });
+  // quien era llevado por alguien que acaba de caer, cae también
+  for (const c of corredores) if (c.estado === "caido" && c.lleva !== null) {
+    const k = corredores.find((q) => q.id === c.lleva);
+    if (k && k.estado === "llevado") { Object.assign(k, { estado: "caido", caidoEn: s.turno, x: c.x, y: c.y }); }
+    c.lleva = null;
+  }
+  // 3b. caídos que nadie alcanzó, y heridos que se recuperan
+  corredores = corredores.map((c) => {
+    if (c.estado === "caido" && s.turno - c.caidoEn >= TICKS_CAIDO) {
+      s = log(s, `${c.nombre} muere en ${coord(c)}. Nadie llegó a tiempo.`);
+      let delta = -2;
+      for (const q of corredores) if (q.id !== c.id && activo(q) && unidos(c, q)) { q.lutoHasta = s.turno + TICKS_LUTO; delta -= 1; s = log(s, `${q.nombre} está de luto y no saldrá en ${TICKS_LUTO} s.`); }
+      s = ajustarBalance(s, delta);
+      return { ...c, estado: "muerto", destino: null };
+    }
+    if (c.estado === "herido" && s.turno - c.heridoEn >= (s.enfermeria ? TICKS_HERIDO_ENFERMERIA : TICKS_HERIDO)) {
+      s = log(s, `${c.nombre} se recupera y vuelve a la plaza.`);
+      return { ...c, estado: "ciudad", heridoEn: null };
+    }
+    return c;
   });
   s = revelar({ ...s, corredores });
   // 4. ciclo
@@ -646,7 +812,7 @@ export function avanzar(s) {
     const giroNum = s.giro + 1;
     const mapa = desplazarMapa(s.mapa, s.patron, giroNum);
     corredores = s.corredores.map((c) => {
-      if (c.estado !== "fuera") return c;
+      if (c.estado !== "fuera" && c.estado !== "caido" && c.estado !== "llevado") return c;
       const p = desplazarCoord(c.x, c.y, s.patron, giroNum);
       return { ...c, x: p.x, y: p.y };
     });
@@ -668,7 +834,7 @@ export function avanzar(s) {
   // 5. fin
   if (s.salidaAlcanzada) {
     s = { ...s, fin: { tipo: "victoria", motivo: "Un corredor encontró la salida." } };
-  } else if (s.corredores.every((c) => c.estado === "perdido")) {
+  } else if (!s.corredores.some((c) => c.estado === "ciudad" || c.estado === "fuera" || c.estado === "herido")) {
     s = { ...s, fin: { tipo: "derrota", motivo: "No quedan corredores." } };
   } else if (s.turno >= TURNOS_MAX) {
     s = { ...s, fin: { tipo: "tiempo", motivo: "Se acabaron los turnos." } };
@@ -683,7 +849,7 @@ export const ticksHastaRacion = (s) => TICK_ECONOMIA - ((s.turno - 1) % TICK_ECO
 
 // Estima un viaje de ida y vuelta desde la ciudad hasta `destino` con el laberinto como está ahora.
 // Devuelve null si no hay camino. `margen` suma raciones por si el laberinto gira en el camino.
-export function estimarViaje(s, destino, margen = 1) {
+export function estimarViaje(s, destino, margen = 1, c = null) {
   const plan = mapaPlan(s);
   const salida = celdaCiudadMasCercana(plan, destino);
   if (!salida) return null;
@@ -691,7 +857,7 @@ export function estimarViaje(s, destino, margen = 1) {
   if (!ida) return null;
   const vuelta = celdaCiudadMasCercana(plan, destino);
   const celdas = ida.length + (vuelta ? vuelta.pasos : ida.length);
-  const ticks = Math.ceil(celdas / velocidad(s));
+  const ticks = Math.ceil(celdas / (c ? velocidadDe(s, c) : velocidad(s)));
   // lo desconocido puede esconder paredes: cada 4 celdas sin explorar en la ida suman una ración de margen
   const desconocidas = ida.filter((p) => s.conocido[p.y][p.x] === "?").length;
   const margenNiebla = Math.ceil(desconocidas / 4);
@@ -704,7 +870,7 @@ export function tiempoRestante(s, c) {
   if (c.estado !== "fuera") return null;
   const ticks = (c.raciones - 1) * TICK_ECONOMIA + ticksHastaRacion(s);
   const casa = celdaCiudadMasCercana(mapaPlan(s), c);
-  const ticksVuelta = casa ? Math.ceil(casa.pasos / velocidad(s)) : null;
+  const ticksVuelta = casa ? Math.ceil(casa.pasos / velocidadDe(s, c)) : null;
   return { ticks, ticksVuelta, alcanza: ticksVuelta !== null && ticksVuelta <= ticks };
 }
 

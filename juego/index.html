@@ -62,7 +62,20 @@
   .tarjeta { background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 8px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
   .tarjeta.sel { border-color: var(--acento); }
   .tarjeta b { display: block; font-size: 15px; }
-  .tarjeta.perdido, .tarjeta.salio { opacity: .55; }
+  .tarjeta.perdido, .tarjeta.salio, .tarjeta.muerto, .tarjeta.ido { opacity: .5; }
+  .tarjeta.caido { border-color: var(--acento); }
+  .tarjeta.herido, .tarjeta.llevado { border-style: dashed; }
+  .tarjeta b small { font-weight: normal; font-size: 11px; color: var(--suave); }
+  .ficha { font-size: 12px; color: var(--suave); margin: 0 0 6px; line-height: 1.4; }
+  .ficha b { color: var(--tinta); }
+  .balanza { margin-top: 10px; }
+  .balanza .barra { position: relative; height: 10px; border-radius: 5px; background: linear-gradient(90deg, var(--marca), var(--borde) 50%, var(--acento)); }
+  .balanza .aguja { position: absolute; top: -4px; width: 4px; height: 18px; background: var(--tinta); border-radius: 2px; transform: translateX(-2px); }
+  .balanza .etiquetas { display: flex; justify-content: space-between; font-size: 11px; color: var(--suave); margin-top: 4px; }
+  #evento { position: fixed; inset: 0; background: rgba(34,31,27,.7); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 5; }
+  #evento .caja { background: var(--papel); border-radius: 12px; padding: 20px; max-width: 360px; width: 100%; border-left: 6px solid var(--acento); }
+  #evento h2 { margin: 0 0 8px; font-size: 20px; }
+  #evento p { margin: 0 0 12px; }
   .tarjeta .aviso { display: block; color: var(--acento); font-size: 12px; margin-top: 2px; }
   .tarjeta .tiempo-restante { display: block; color: var(--suave); font-size: 12px; margin-top: 2px; }
   .fila-extra { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -99,6 +112,7 @@
   button:disabled { opacity: .4; cursor: default; }
   button.primario { background: var(--tinta); color: var(--papel); }
   button.grande { width: 100%; padding: 14px; font-size: 17px; margin-top: 12px; }
+  button.mini { padding: 4px 8px; font-size: 12px; }
   .stepper { display: inline-flex; align-items: center; border: 1px solid var(--tinta); border-radius: 8px; overflow: hidden; }
   .stepper button { border: 0; border-radius: 0; padding: 8px 12px; }
   .stepper span { padding: 0 10px; min-width: 70px; text-align: center; font-size: 14px; }
@@ -149,9 +163,15 @@
   <div class="fila-extra">
     <button id="btnHuerto"></button>
     <button id="btnTaller"></button>
+    <button id="btnEnfermeria"></button>
     <button id="btnReclutar"></button>
   </div>
   <p class="nota">La ciudad produce 3 de comida y consume 2 cada 6 segundos. Los materiales solo vienen del laberinto.</p>
+  <div class="balanza">
+    <div class="barra"><div class="aguja" id="aguja"></div></div>
+    <div class="etiquetas"><span>Quedarse</span><span id="balanzaTexto"></span><span>Salir</span></div>
+    <p class="nota">Cada expedición, recluta y marca leída inclina hacia salir. Cada huerto, enfermería y muerte inclina hacia quedarse. En los extremos pasan cosas.</p>
+  </div>
 </section>
 
 <section class="panel" id="tab-mapas" hidden>
@@ -191,7 +211,9 @@
     <p><b>Explorar.</b> El laberinto empieza a oscuras: solo se conoce lo que rodea a la ciudad. Los corredores destapan lo que ven a su paso. Toca un corredor y luego una celda, aunque sea desconocida, para darle destino.</p>
     <p><b>Raciones.</b> En la ciudad elige cuántas lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. El juego recomienda cuántas necesita para ir y volver, con margen por lo que no se ha explorado. La tarjeta de cada corredor muestra el tiempo que le queda y avisa si no le alcanza para volver.</p>
     <p><b>El giro.</b> Cada 60 segundos algunas filas o columnas se desplazan. Cuáles y hacia dónde cambia en cada partida: hay que descubrirlo. Las celdas a la vista que cambiaron se marcan, el mapa chico de la pestaña Mapas muestra cómo lo conocías antes de cada giro (con flechas para recorrer el historial), las marcas que lees cuentan algo del patrón en palabras, y en la sala de mapas puedes gastar conocimiento para poner a prueba una hipótesis ("las filas pares del norte van hacia la derecha"): el laberinto responde sí, no o en parte, y un sí deja esas líneas marcadas en los bordes. Lo visto antes de un giro se muestra apagado porque puede haber cambiado.</p>
-    <p><b>Hallazgos.</b> Los escombros (M) dan materiales; las marcas (K), conocimiento. Con 4 materiales se construye un huerto; con 5, el taller (los corredores caminan el doble de rápido). Reclutar un corredor cuesta 3 materiales y 2 de comida, hasta 6.</p>
+    <p><b>Hallazgos.</b> Los escombros (M) dan materiales; las marcas (K), conocimiento. Con 4 materiales se construye un huerto; con 5, el taller (los corredores caminan el doble de rápido). La enfermería cuesta 4. Reclutar un corredor cuesta 3 materiales y 2 de comida, hasta 6.</p>
+    <p><b>Cada persona cuenta.</b> Cada corredor tiene un rasgo: rápido, fuerte o de buen ojo, y una historia. Toca su tarjeta para leerla y, si está en la ciudad, mejorar un atributo con 2 de conocimiento. Un corredor sin raciones cae donde está: otro puede ir a buscarlo y traerlo a cuestas; si nadie llega en 60 segundos, muere. El rescatado queda herido 60 segundos, 30 con enfermería. Quien tenía un vínculo con un muerto queda de luto y no sale por un tiempo.</p>
+    <p><b>Las dos facciones.</b> En la ciudad hay quienes quieren salir y quienes quieren quedarse. La balanza de la pestaña Ciudad se inclina con lo que haces: expediciones, reclutas y marcas hacia salir; huertos, enfermería y muertes hacia quedarse. En los extremos pasan cosas: a +5 alguien se va solo, a +9 alguien se va para siempre, a −5 esconden comida, a −9 cierran las puertas.</p>
     <p><b>Dificultad.</b> Cada partida usa un patrón de giro distinto. Las primeras partidas reciben patrones fáciles; cada victoria sube un nivel, hasta 5. Abajo se puede fijar a mano.</p>
     <p><b>La salida.</b> Nadie sabe dónde está. Al leer 4 marcas aparece en el mapa, y entonces hay que llegar con un corredor antes de que se acabe el tiempo (8 minutos).</p>
   </div>
@@ -201,6 +223,12 @@
   </div>
   <div class="pie">Prototipo de la fase 2: el laberinto se aprende. Semilla <span id="semilla"></span>, patrón oculto de dificultad <span id="dificultadActual"></span>. <a href="#" id="btnNueva">Nueva partida</a> · <a href="#" id="btnCopiar">Copiar registro de partidas</a></div>
 </section>
+
+<div id="evento"><div class="caja">
+  <h2 id="eventoTitulo"></h2>
+  <p id="eventoTexto"></p>
+  <button class="primario" id="btnEventoOk">Seguir</button>
+</div></div>
 
 <div id="fin"><div class="caja">
   <h2 id="finTitulo"></h2>
@@ -244,9 +272,10 @@ function nueva(semilla) {
 // ---------- reloj ----------
 function tick() {
   posPrevias = new Map(s.corredores.map((k) => [k.id, { x: k.x, y: k.y, estado: k.estado }]));
-  const giros = s.historial.length;
+  const giros = s.historial.length, eventos = s.eventos.length;
   s = M.avanzar(s);
   if (s.historial.length !== giros) giroVisto = null;
+  if (s.eventos.length !== eventos) mostrarEvento(s.eventos[s.eventos.length - 1]);
   fraccion = 0;
   render();
 }
@@ -267,6 +296,12 @@ function posDibujo(k) {
   const salto = M.velocidad(s);
   if (!p || p.estado !== k.estado || Math.abs(p.x - k.x) > salto || Math.abs(p.y - k.y) > salto) return { x: k.x, y: k.y };
   return { x: p.x + (k.x - p.x) * fraccion, y: p.y + (k.y - p.y) * fraccion };
+}
+function mostrarEvento(ev) {
+  pausado = true;
+  $("eventoTitulo").textContent = ev.titulo;
+  $("eventoTexto").textContent = ev.texto;
+  $("evento").style.display = "flex";
 }
 function mmss(ticks) { const t = Math.max(0, ticks); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; }
 function actualizarReloj() {
@@ -341,7 +376,15 @@ function dibujar() {
   }
   // corredores
   for (const k of s.corredores) {
-    if (k.estado === "perdido" || k.estado === "salio") continue;
+    if (k.estado === "caido" && visibles.has(k.y * N + k.x)) {
+      const cx = k.x * TAM + TAM / 2, cy = k.y * TAM + TAM / 2;
+      ctx.beginPath(); ctx.arc(cx, cy, TAM * .32, 0, Math.PI * 2);
+      ctx.strokeStyle = css("--acento"); ctx.lineWidth = 3; ctx.stroke(); ctx.lineWidth = 1;
+      ctx.fillStyle = css("--acento"); ctx.font = `bold ${TAM * .4}px Georgia`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(k.nombre[0], cx, cy + 1);
+      continue;
+    }
+    if (k.estado !== "ciudad" && k.estado !== "fuera") continue;
     const pd = posDibujo(k);
     const cx = pd.x * TAM + TAM / 2, cy = pd.y * TAM + TAM / 2;
     ctx.beginPath(); ctx.arc(cx, cy, TAM * .36, 0, Math.PI * 2);
@@ -412,6 +455,11 @@ function render() {
   bh.title = "Cada huerto suma 2 de comida por periodo.";
   bt.disabled = !!s.fin || s.taller || s.materiales < M.COSTO_TALLER;
 
+  const be = $("btnEnfermeria");
+  be.textContent = s.enfermeria ? "Enfermería lista" : `Enfermería (${M.COSTO_ENFERMERIA}): heridos ×2`;
+  be.disabled = !!s.fin || s.enfermeria || s.materiales < M.COSTO_ENFERMERIA;
+  $("aguja").style.left = `${(s.balance + 10) * 5}%`;
+  $("balanzaTexto").textContent = s.balance === 0 ? "equilibrio" : s.balance > 0 ? `+${s.balance} hacia salir` : `${s.balance} hacia quedarse`;
   const br = $("btnReclutar");
   const vivos = s.corredores.filter((k) => k.estado !== "perdido" && k.estado !== "salio").length;
   br.textContent = `Reclutar corredor (${M.COSTO_RECLUTA.materiales} mat + ${M.COSTO_RECLUTA.comida} comida) · ${vivos} de ${M.CORREDORES_MAX}`;
@@ -457,44 +505,76 @@ function render() {
     .sort((a, b) => (a.tipo === b.tipo ? a.indice - b.indice : a.tipo === "fila" ? -1 : 1))
     .map((l) => `<span>${M.nombreLinea(l.tipo, l.indice)}: ${l.glifo} ${l.modo === "quieta" ? "quieta" : l.modo === "alterna" ? "va y vuelve" : l.modo === "cada2" ? "solo giros pares" : "cada giro"}</span>`).join("");
   $("corredores").innerHTML = s.corredores.map((k) => {
-    let estado = { ciudad: "en la ciudad", fuera: `fuera · ${k.raciones} rac.`, perdido: "perdido", salio: "¡salió!" }[k.estado];
+    const porta = s.corredores.find((q) => q.lleva === k.id);
+    let estado = {
+      ciudad: k.lutoHasta > s.turno ? `de luto · ${k.lutoHasta - s.turno} s` : "en la ciudad",
+      fuera: `fuera · ${k.raciones} rac.`,
+      caido: `caído en ${M.coord(k)} · ${Math.max(0, M.TICKS_CAIDO - (s.turno - k.caidoEn))} s`,
+      llevado: porta ? `lo trae ${porta.nombre}` : "rescatado",
+      herido: `herido · ${Math.max(0, (s.enfermeria ? M.TICKS_HERIDO_ENFERMERIA : M.TICKS_HERIDO) - (s.turno - k.heridoEn))} s`,
+      muerto: "muerto", ido: "se fue", perdido: "perdido", salio: "¡salió!",
+    }[k.estado];
     if (k.estado === "fuera" && k.carga) estado += ` · ${k.carga} mat.`;
+    if (k.estado === "fuera" && k.lleva !== null) estado += ` · lleva a ${s.corredores[k.lleva].nombre}`;
     let extra = "";
     if (k.estado === "fuera") {
       const t = M.tiempoRestante(s, k);
       extra = `<span class="tiempo-restante">le quedan ${t.ticks} s</span>`;
       if (!t.alcanza) extra += `<span class="aviso">${t.ticksVuelta === null ? "sin camino a casa" : "no le alcanza para volver"}</span>`;
     }
-    return `<div class="tarjeta ${k.estado} ${seleccion === k.id ? "sel" : ""}" data-id="${k.id}"><b>${k.nombre}</b>${estado}${extra}</div>`;
+    if (k.estado === "caido") extra = `<span class="aviso">manda a alguien a buscarlo</span>`;
+    const rasgo = M.FUERTES[k.fuerte] ? M.FUERTES[k.fuerte].nombre : "";
+    return `<div class="tarjeta ${k.estado} ${seleccion === k.id ? "sel" : ""}" data-id="${k.id}"><b>${k.nombre} <small>${rasgo}</small></b>${estado}${extra}</div>`;
   }).join("");
   for (const el of document.querySelectorAll(".tarjeta")) el.onclick = () => seleccionar(+el.dataset.id);
 
   const a = $("acciones");
   const c = seleccion !== null ? s.corredores[seleccion] : null;
-  if (!c || c.estado === "perdido" || c.estado === "salio") {
+  const ficha = c ? `<p class="ficha"><b>${c.nombre}</b>, ${M.FUERTES[c.fuerte].nombre}. ${c.historia.join(" ")} <b>Velocidad ${M.velocidadDe(s, c)}</b> · <b>carga ${c.fuerza}</b> · <b>vista ${c.ojo}</b></p>` : "";
+  if (!c) {
     a.innerHTML = `<div class="fila"><span style="color:var(--suave)">Toca un corredor para darle órdenes.</span></div>`;
     $("pista").textContent = "";
+  } else if (c.estado === "caido") {
+    a.innerHTML = ficha + `<div class="fila"><span style="color:var(--acento)">${c.nombre} está en el suelo en ${M.coord(c)}. Manda a otro corredor a esa celda para traerlo; si nadie llega en ${Math.max(0, M.TICKS_CAIDO - (s.turno - c.caidoEn))} s, muere.</span></div>`;
+    $("pista").textContent = "";
+  } else if (c.estado === "herido" || c.estado === "llevado") {
+    a.innerHTML = ficha + `<div class="fila"><span style="color:var(--suave)">${c.estado === "herido" ? "Se está recuperando. Una enfermería acorta el tiempo a la mitad." : "Vuelve a cuestas de otro corredor."}</span></div>`;
+    $("pista").textContent = "";
+  } else if (c.estado === "muerto" || c.estado === "ido" || c.estado === "perdido" || c.estado === "salio") {
+    a.innerHTML = ficha + `<div class="fila"><span style="color:var(--suave)">${c.estado === "muerto" ? "Murió en el laberinto." : c.estado === "ido" ? "Se fue de la ciudad con los que no quisieron esperar." : c.estado === "salio" ? "Cruzó la salida." : "Perdido."}</span></div>`;
+    $("pista").textContent = "";
+  } else if (c.estado === "ciudad" && (c.lutoHasta > s.turno || s.encierroHasta > s.turno)) {
+    a.innerHTML = ficha + `<div class="fila"><span style="color:var(--acento)">${c.lutoHasta > s.turno ? `${c.nombre} está de luto y no sale hasta dentro de ${c.lutoHasta - s.turno} s.` : `Las puertas están cerradas: nadie sale hasta dentro de ${s.encierroHasta - s.turno} s.`}</span></div>`;
+    $("pista").textContent = "";
   } else if (c.estado === "ciudad") {
-    const est = pendiente ? M.estimarViaje(s, pendiente) : null;
+    const est = pendiente ? M.estimarViaje(s, pendiente, 1, c) : null;
     if (est && raciones === null) raciones = est.raciones;
     const r = raciones ?? 4;
     $("pista").textContent = pendiente
       ? (est ? `Hasta ${M.coord(pendiente)}: ${est.ida} celdas de ida y ${est.vuelta ?? "?"} de vuelta, unos ${est.ticks} s en total. Recomendado: ${est.raciones} raciones: una de margen por si el laberinto gira${est.margenNiebla ? ` y ${est.margenNiebla} más porque ${est.desconocidas} celdas del camino están sin explorar y puede haber paredes` : ""}.` : `No hay camino hasta ${M.coord(pendiente)} con lo que se sabe del laberinto.`)
       : `${c.nombre} está en la ciudad. Toca una celda para elegir destino.`;
     const faltaComida = s.comida < r;
-    a.innerHTML = `<div class="fila">
+    const puedeMejorar = s.conocimiento >= M.COSTO_MEJORA;
+    a.innerHTML = ficha + `<div class="fila">
       <div class="stepper"><button id="menos">−</button><span>${r} rac.</span><button id="mas">+</button></div>
       <button class="primario" id="btnEnviar" ${!pendiente || !est || faltaComida ? "disabled" : ""}>Enviar</button>
       <span style="font-size:12px;color:${faltaComida ? "var(--acento)" : "var(--suave)"}">${faltaComida ? `faltan ${r - s.comida} de comida` : `cuesta ${r} comida`}${est && r < est.raciones ? " · justo, sin margen" : ""}</span>
+    </div>
+    <div class="fila" style="margin-top:6px">
+      <span style="font-size:12px;color:var(--suave)">Mejorar (${M.COSTO_MEJORA} conoc.):</span>
+      <button class="mini" data-mejora="velocidad" ${!puedeMejorar || c.velocidad >= 2 ? "disabled" : ""}>velocidad</button>
+      <button class="mini" data-mejora="fuerza" ${!puedeMejorar || c.fuerza >= 5 ? "disabled" : ""}>carga</button>
+      <button class="mini" data-mejora="ojo" ${!puedeMejorar || c.ojo >= 2 ? "disabled" : ""}>vista</button>
     </div>`;
     $("menos").onclick = () => { raciones = Math.max(1, r - 1); render(); };
     $("mas").onclick = () => { raciones = Math.min(M.RACIONES_MAX, r + 1); render(); };
-    $("btnEnviar").onclick = () => { s = M.enviar(s, c.id, pendiente, r); pendiente = null; raciones = null; render(); };
+    $("btnEnviar").onclick = () => { const n = s.eventos.length; s = M.enviar(s, c.id, pendiente, r); pendiente = null; raciones = null; if (s.eventos.length !== n) mostrarEvento(s.eventos[s.eventos.length - 1]); render(); };
+    for (const b of a.querySelectorAll("[data-mejora]")) b.onclick = () => { s = M.mejorar(s, c.id, b.dataset.mejora); render(); };
   } else {
     $("pista").textContent = c.destino
       ? `${c.nombre} va hacia ${M.coord(c.destino)}. Toca otra celda para cambiarlo.`
       : `${c.nombre} espera en ${M.coord(c)}. Toca una celda o pulsa Volver.`;
-    a.innerHTML = `<div class="fila">
+    a.innerHTML = ficha + `<div class="fila">
       <button id="btnVolver">Volver a la ciudad</button>
       <button id="btnAtajo" ${c.atajo || s.conocimiento < M.COSTO_ATAJO ? "disabled" : ""}>${c.atajo ? "Atajo listo" : `Atajo (${M.COSTO_ATAJO} conoc.)`}</button>
     </div>`;
@@ -527,8 +607,10 @@ cv.addEventListener("click", (ev) => {
   render();
 });
 
-$("btnHuerto").onclick = () => { s = M.construir(s, "huerto"); render(); };
+$("btnHuerto").onclick = () => { const n = s.eventos.length; s = M.construir(s, "huerto"); if (s.eventos.length !== n) mostrarEvento(s.eventos[s.eventos.length - 1]); render(); };
 $("btnReclutar").onclick = () => { s = M.reclutar(s); render(); };
+$("btnEnfermeria").onclick = () => { s = M.construir(s, "enfermeria"); render(); };
+$("btnEventoOk").onclick = () => { $("evento").style.display = "none"; };
 $("btnConsultar").onclick = () => { const [sid, sidx] = $("selSujeto").value.split(":"); s = M.preguntar(s, sid, $("selPredicado").value, sidx === "" ? null : +sidx); render(); };
 $("selSujeto").onchange = () => render();
 $("selPredicado").onchange = () => render();
@@ -562,7 +644,8 @@ function guardarPartida() {
     const lista = leerPartidas();
     lista.push({ version: VERSION_REGLAS, fecha: new Date().toISOString(), semilla: s.semilla, dificultad: s.patron.dificultad, patron: s.patron.nombre, resultado: s.fin.tipo, motivo: s.fin.motivo,
       ticks: s.turno, segundos: Math.round((Date.now() - inicio) / 1000), puntos: M.puntos(s),
-      huertos: s.huertos, taller: s.taller, perdidos: s.corredores.filter((k) => k.estado === "perdido").length });
+      huertos: s.huertos, taller: s.taller, enfermeria: s.enfermeria, perdidos: s.corredores.filter((k) => k.estado === "caido" || k.estado === "perdido").length,
+      muertos: s.corredores.filter((k) => k.estado === "muerto").length, idos: s.corredores.filter((k) => k.estado === "ido").length, balance: s.balance, eventos: s.eventos.map((e) => e.id) });
     localStorage.setItem("elclaro.partidas", JSON.stringify(lista));
   } catch {}
 }

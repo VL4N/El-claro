@@ -6,7 +6,7 @@ Juego de estrategia por turnos. Administras una pequeña ciudad encerrada en el 
 
 ## Estado
 
-Fase 2, "el laberinto se aprende": prototipo jugable en el navegador, en `juego/`, en tiempo real con pausa, niebla de guerra, regla del giro oculta y salida revelada por las marcas. La fase 1 pasó su puerta; la fase 0 (papel) quedó como opcional.
+Fase 3, "cada persona cuenta": prototipo jugable en el navegador, en `juego/`. Tiempo real con pausa, niebla de guerra, doce patrones de giro ocultos, sala de mapas por hipótesis, corredores con rasgo e historia, rescates, heridos, vínculos y dos facciones. La fase 1 pasó su puerta; la fase 2 espera pruebas con personas nuevas.
 
 **Jugar:** cuando GitHub Pages esté activado, el juego vive en `https://vl4n.github.io/El-claro/`. Mientras tanto, se puede abrir `juego/index.html` sirviendo la carpeta con cualquier servidor estático.
 
@@ -32,6 +32,7 @@ El material de la fase está en [`fase-0/`](fase-0/):
 - [docs/01-mapeo-del-juego.md](docs/01-mapeo-del-juego.md): concepto, pilares, sistemas y cómo se conectan entre sí.
 - [docs/02-ruta-de-desarrollo.md](docs/02-ruta-de-desarrollo.md): fases, alcance de cada una, puertas de decisión y riesgos.
 - [docs/03-biblioteca-de-reglas.md](docs/03-biblioteca-de-reglas.md): los doce patrones de giro del laberinto y cómo se aprenden.
+- [docs/04-personas-y-facciones.md](docs/04-personas-y-facciones.md): rasgos, estados, rescates, vínculos, la balanza de facciones y sus eventos.
 
 ## Cómo seguir el avance
 

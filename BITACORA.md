@@ -8,6 +8,30 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-22 · Sesión 16: fase 3, cada persona cuenta
+
+**Hecho**
+
+- Corredores con rasgo (rápido, fuerte, buen ojo, sin destacar), tres atributos (velocidad, carga, vista), dos líneas de historia y vínculos entre ellos. Generador con 30 nombres, 12 orígenes y 11 parentescos. Mejora de atributos con conocimiento.
+- Estados nuevos: caído, llevado, herido, de luto, muerto, se fue. Rescate a cuestas. Enfermería que acorta la recuperación.
+- Facciones: balanza de −10 a +10 que se mueve con cada decisión, y cuatro eventos de umbral que pausan el juego.
+- Interfaz: tarjetas con rasgo y estado, ficha al tocar, botones de mejora, balanza en la pestaña Ciudad, aviso de evento. Documento `docs/04-personas-y-facciones.md`.
+- Pruebas para todo: atributos, visión, mejora, caer, rescatar, herir, morir, luto, balanza, los cuatro eventos.
+
+**Decidido**
+
+- **Nadie se "pierde" ya: cae, y se puede ir a buscar.** Motivo: es la mecánica que hace que una persona cuente. Rescatar cuesta raciones, tiempo y riesgo, y la decisión de no ir también pesa.
+- **La muerte tiene consecuencia doble:** la balanza se inclina hacia quedarse, y quien tenía vínculo no sale por un minuto. Motivo: los vínculos existen para esto. Un nombre y una historia no bastan si perder a esa persona no cambia nada.
+- **Un rasgo por corredor, y los tres iniciales distintos.** Motivo: la elección de a quién mandar tiene que ser evidente desde la primera partida: el rápido para el rescate, el de buen ojo para explorar, el fuerte para los escombros.
+- **La balanza es un termómetro, no diplomacia.** Lo dice el mapeo desde el principio. Motivo: cuatro eventos bastan para que el estilo de juego tenga consecuencias.
+- **El motor sigue siendo puro.** Se detectó y corrigió una mutación en el lugar de los corredores durante los rescates; las pruebas lo atraparon porque contaminaba estados anteriores.
+
+**Siguiente**
+
+- Que el autor y las personas nuevas jueguen. Puerta de la fase 3: ¿evitan mandar a un corredor concreto por quién es?
+
+---
+
 ## 2026-10-22 · Sesión 15: el autor descubre una regla
 
 **Hecho**

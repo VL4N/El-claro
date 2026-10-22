@@ -72,7 +72,7 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   ok(s.corredores[1].estado === "fuera", "sale con 1 ración");
   s = M.cambiarDestino(s, 1, lejos);
   for (let i = 0; i < M.TICK_ECONOMIA; i++) s = M.avanzar(s);
-  ok(s.corredores[1].estado === "perdido", "con 1 ración se pierde al terminar el primer periodo");
+  ok(s.corredores[1].estado === "caido", "con 1 ración cae al terminar el primer periodo");
 }
 
 // 4b. casos de la ciudad
@@ -92,7 +92,7 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
     s = M.volver(s, 0);
     let g = 0;
     while (s.corredores[0].estado === "fuera" && g++ < 80) { s = M.volver(s, 0); s = M.avanzar(s); }
-    ok(s.corredores[0].estado !== "fuera", "volver termina con el corredor en la ciudad o perdido");
+    ok(s.corredores[0].estado !== "fuera", "volver termina con el corredor en la ciudad o caído");
     if (s.corredores[0].estado === "ciudad") ok(s.corredores[0].x === M.casa(0).x && s.corredores[0].y === M.casa(0).y, "al volver ocupa su lugar en la plaza");
   }
 }
@@ -298,6 +298,95 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
     s2 = M.avanzar(s2);
     for (const c of s2.corredores) if (c.estado === "fuera") ok(s2.mapa[c.y][c.x] !== "#", `corredor dentro de una pared en tick ${t}`);
   }
+}
+
+// 9. fase 3: personas
+{
+  let s = M.nuevaPartida(3);
+  const fuertes = new Set(s.corredores.map((c) => c.fuerte));
+  ok(fuertes.size === 3 && !fuertes.has("comun"), "los tres iniciales tienen atributos distintos");
+  ok(s.corredores.every((c) => c.historia.length === 2), "cada corredor tiene dos líneas de historia");
+  ok(s.corredores[2].vinculo && s.corredores[2].vinculo.id < 2, "el tercero tiene un vínculo con otro");
+  const rapido = s.corredores.find((c) => c.fuerte === "rapido"), ojo = s.corredores.find((c) => c.fuerte === "ojo");
+  ok(M.velocidadDe(s, rapido) === 2 && M.velocidadDe({ ...s, taller: true }, rapido) === 3, "velocidad propia más taller");
+  // el de buen ojo destapa más
+  const d = M.distancias(s.mapa, { x: 7, y: 7 });
+  let lejos = null;
+  for (const [k, v] of d) if (v >= 5 && !M.esCiudad(k % 15, Math.floor(k / 15))) { lejos = { x: k % 15, y: Math.floor(k / 15) }; break; }
+  const cuenta = (st) => st.conocido.join("").split("").filter((c) => c !== "?").length;
+  let a = M.enviar(s, ojo.id, lejos, 6); for (let i = 0; i < 4; i++) a = M.avanzar(a);
+  const otro = s.corredores.find((c) => c.fuerte === "fuerte");
+  let b = M.enviar(s, otro.id, lejos, 6); for (let i = 0; i < 4; i++) b = M.avanzar(b);
+  ok(cuenta(a) > cuenta(b), "el de buen ojo destapa más celdas que el fuerte en el mismo viaje");
+  // mejorar
+  let m = { ...s, conocimiento: 4 };
+  m = M.mejorar(m, otro.id, "ojo");
+  ok(m.corredores[otro.id].ojo === 2 && m.conocimiento === 2, "mejorar sube un atributo y cobra conocimiento");
+  m = M.mejorar(m, otro.id, "fuerza");
+  ok(m.corredores[otro.id].fuerza === 5 && m.conocimiento === 2, "no se mejora por encima del tope");
+}
+
+// 10. fase 3: caer, rescatar, morir, luto
+{
+  let s = M.revelarTodo(M.nuevaPartida(3));
+  const d = M.distancias(s.mapa, { x: 7, y: 7 });
+  let cerca = null;
+  for (const [k, v] of d) if (v === 3 && !M.esCiudad(k % 15, Math.floor(k / 15))) { cerca = { x: k % 15, y: Math.floor(k / 15) }; break; }
+  const lento = s.corredores.find((c) => c.velocidad === 1);
+  s = M.enviar(s, lento.id, cerca, 1);
+  for (let i = 0; i < M.TICK_ECONOMIA; i++) s = M.avanzar(s);
+  const caido = s.corredores[lento.id];
+  ok(caido.estado === "caido" && caido.caidoEn > 0, "sin raciones el corredor cae y queda en el mapa");
+  // mandar a otro a buscarlo
+  const otro = s.corredores.find((c) => c.id !== lento.id && c.estado === "ciudad");
+  let r = M.enviar(s, otro.id, { x: caido.x, y: caido.y }, 6);
+  for (let i = 0; i < 12 && r.corredores[lento.id].estado !== "llevado"; i++) r = M.avanzar(r);
+  ok(r.corredores[lento.id].estado === "llevado" && r.corredores[otro.id].lleva === lento.id, "el otro lo levanta al pasar por su celda");
+  r = M.volver(r, otro.id);
+  for (let i = 0; i < 20 && r.corredores[lento.id].estado !== "herido"; i++) { r = M.volver(r, otro.id); r = M.avanzar(r); }
+  ok(r.corredores[lento.id].estado === "herido" && r.corredores[otro.id].lleva === null, "al llegar a la ciudad el rescatado queda herido");
+  const t0 = r.turno;
+  for (let i = 0; i < M.TICKS_HERIDO + 2 && r.corredores[lento.id].estado === "herido"; i++) r = M.avanzar(r);
+  ok(r.corredores[lento.id].estado === "ciudad" && r.turno - t0 <= M.TICKS_HERIDO + 1, "el herido se recupera");
+  // sin rescate, muere; el vínculo queda de luto
+  let m = { ...s, corredores: s.corredores.map((c) => c.id === lento.id ? c : { ...c, vinculo: { id: lento.id, texto: "hermano de " + caido.nombre } }) };
+  const balance0 = m.balance;
+  for (let i = 0; i < M.TICKS_CAIDO + 1 && m.corredores[lento.id].estado !== "muerto"; i++) m = M.avanzar(m);
+  ok(m.corredores[lento.id].estado === "muerto", "sin rescate, muere");
+  const doliente = m.corredores.find((c) => c.id !== lento.id);
+  ok(doliente.lutoHasta > m.turno, "el vínculo queda de luto");
+  ok(m.balance < balance0, "una muerte inclina la balanza hacia quedarse");
+  const antes = m.comida;
+  const e = M.enviar(m, doliente.id, cerca, 2);
+  ok(e.comida === antes && e.corredores[doliente.id].estado !== "fuera", "de luto no sale");
+}
+
+// 11. fase 3: facciones y eventos
+{
+  let s = M.nuevaPartida(3);
+  ok(s.balance === 0 && s.eventos.length === 0, "la balanza empieza en el centro");
+  let a = M.ajustarBalance(s, -5);
+  ok(a.eventos.length === 1 && a.eventos[0].id === "miedo" && a.comida === s.comida - 3, "a -5 se dispara Miedo y cuesta 3 de comida");
+  a = M.ajustarBalance(a, -4);
+  ok(a.eventos.length === 2 && a.eventos[1].id === "encierro" && a.encierroHasta > a.turno, "a -9 se dispara Encierro");
+  const d = M.distancias(s.mapa, { x: 7, y: 7 });
+  let cerca = null;
+  for (const [k, v] of d) if (v === 3 && !M.esCiudad(k % 15, Math.floor(k / 15))) { cerca = { x: k % 15, y: Math.floor(k / 15) }; break; }
+  ok(M.enviar(a, 0, cerca, 2).corredores[0].estado === "ciudad", "durante el encierro nadie sale");
+  a = M.ajustarBalance(a, -5);
+  ok(a.balance === -10 && a.eventos.length === 2, "la balanza no pasa de -10 y los eventos no se repiten");
+  let b = M.ajustarBalance(s, 5);
+  ok(b.eventos.length === 1 && b.eventos[0].id === "impaciencia" && b.corredores.some((c) => c.estado === "fuera"), "a +5 alguien se va por su cuenta");
+  b = M.ajustarBalance(b, 4);
+  ok(b.eventos.length === 2 && b.eventos[1].id === "exodo" && b.corredores.some((c) => c.estado === "ido"), "a +9 alguien se va para siempre");
+  // acciones mueven la balanza
+  let c = { ...s, materiales: 10 };
+  c = M.construir(c, "huerto");
+  ok(c.balance === -1, "un huerto inclina hacia quedarse");
+  c = M.construir(c, "enfermeria");
+  ok(c.enfermeria && c.balance === -2, "la enfermería también");
+  c = M.enviar(c, 0, cerca, 2);
+  ok(c.balance === -1, "una expedición inclina hacia salir");
 }
 
 console.log(fallos === 0 ? "TODO OK" : `${fallos} fallos`);
