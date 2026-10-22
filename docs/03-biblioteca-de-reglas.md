@@ -35,8 +35,8 @@ Las filas y columnas están en la numeración que ve el jugador (filas 1 a 15, c
 ## Cómo se aprende un patrón en el juego
 
 1. **Observar.** Tras cada giro, las celdas a la vista que cambiaron se marcan y el registro dice en qué filas. El mapa chico muestra cómo se conocía el laberinto antes del giro.
-2. **Confirmar.** En la sala de mapas se elige una fila o columna y se gasta 1 conocimiento. El juego responde qué hace esa línea y lo marca en el borde del tablero para toda la partida.
-3. **Elegir qué preguntar.** El conocimiento viene de las marcas, seis por mapa, y también sirve para los atajos. No alcanza para preguntar todo: conviene preguntar por las líneas que cruzan las rutas que importan.
+2. **Formular una hipótesis.** En la sala de mapas se arma una afirmación con un sujeto (un grupo de líneas, o una fila o columna suelta) y un predicado, y se gasta 1 conocimiento. El laberinto responde sí, no o en parte (con el conteo). Un sí sobre el sentido o el ritmo marca esas líneas en el borde del tablero para toda la partida.
+3. **Pensar antes de preguntar.** El conocimiento viene de las marcas, seis por mapa, y también sirve para los atajos. Una hipótesis correcta sobre un grupo de seis filas vale por seis preguntas sueltas.
 
 ## Las marcas hablan
 
@@ -51,6 +51,12 @@ Las pistas no reemplazan a la sala de mapas: dicen dónde mirar, y la sala confi
 
 En automático, las primeras partidas usan patrones de dificultad 1 y cada victoria sube un nivel, hasta 5. En el nivel 5 se mezclan los patrones de 4 y 5. El nivel nunca baja solo; se puede fijar a mano en la pestaña Ayuda. Al terminar la partida se revela el nombre y la dificultad del patrón.
 
+## Sujetos y predicados de la sala de mapas
+
+Sujetos: las filas pares del norte (2, 4, 6); del sur (10, 12, 14); todas las filas pares; las filas pegadas a la ciudad (6 y 10); las más lejanas (2 y 14); las columnas pares del oeste (B, D, F); del este (J, L, N); todas las columnas pares; el borde; las filas impares (3, 5, 11, 13); las columnas impares (C, E, K, M); o una fila o columna suelta.
+
+Predicados: se mueven; no se mueven; van hacia la derecha (o abajo) en cada giro; van hacia la izquierda (o arriba) en cada giro; van y vuelven; se mueven solo en los giros pares.
+
 ## Pendiente para esta fase
 
-- Que la sala de mapas permita preguntar por hipótesis ("¿las filas pares van a la derecha?") y no solo por líneas.
+- Pruebas con personas nuevas.

@@ -173,6 +173,30 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   ok(nombres.size === 3, "en dificultad 1 aparecen los tres patrones fáciles");
 }
 
+// 4h. hipótesis
+{
+  const norteSur = M.BIBLIOTECA[0], cascada = M.BIBLIOTECA.find((p) => p.nombre === "cascada"), anillos = M.BIBLIOTECA.find((p) => p.nombre === "anillos");
+  let s = { ...M.nuevaPartida(3, norteSur), conocimiento: 5 };
+  s = M.preguntar(s, "norte", "positivo");
+  ok(s.hipotesis.length === 1 && s.hipotesis[0].respuesta === "sí" && s.conocimiento === 4, "norte a la derecha: sí");
+  ok(s.lineasConocidas.f1 && s.lineasConocidas.f3 && s.lineasConocidas.f5 && s.lineasConocidas.f1.dir === 1, "un sí completo marca las tres filas");
+  s = M.preguntar(s, "sur", "positivo");
+  ok(s.hipotesis[1].respuesta === "no" && !s.lineasConocidas.f9, "sur a la derecha: no, y no marca nada");
+  s = M.preguntar(s, "filasPares", "mueve");
+  ok(s.hipotesis[2].respuesta === "sí" && !s.lineasConocidas.f9, "'se mueven' no revela dirección");
+  s = M.preguntar(s, "norte", "positivo");
+  ok(s.hipotesis.length === 3 && s.conocimiento === 2, "repetir una hipótesis no cuesta ni se duplica");
+  s = M.preguntar(s, "fila", "quieta", 7);
+  ok(s.hipotesis[3].respuesta === "sí" && s.lineasConocidas.f7.modo === "quieta", "una sola fila también se puede preguntar");
+  let s2 = { ...M.nuevaPartida(3, cascada), conocimiento: 2 };
+  s2 = M.preguntar(s2, "filasPares", "mueve");
+  s2 = M.preguntar(s2, "columnasPares", "mueve");
+  ok(s2.hipotesis[0].respuesta === "no" && s2.hipotesis[1].respuesta === "sí", "cascada: filas no, columnas sí");
+  let s3 = { ...M.nuevaPartida(3, anillos), conocimiento: 1 };
+  s3 = M.preguntar(s3, "norte", "positivo");
+  ok(s3.hipotesis[0].respuesta === "en parte" && s3.hipotesis[0].aciertos === 2 && s3.hipotesis[0].total === 3, "anillos: en parte, 2 de 3");
+}
+
 // 5. atajo atraviesa una pared
 {
   const mapa = ["#####", "#C#.#", "#####", "#####", "#####"];

@@ -313,6 +313,7 @@ export function nuevaPartida(semilla = Date.now() % 1000000, patronFijo = null, 
     corredores, salidaAlcanzada: false, salidaConocida: false,
     conocidoAnterior: null, cambiosGiro: [], cambiosEn: -100,
     lineasConocidas: {},  // "f3" o "c5" -> lo que la sala de mapas confirmó
+    hipotesis: [],        // preguntas hechas en la sala de mapas, con su respuesta
     registro: [`El Claro despierta. Nadie sabe dónde está la salida: las marcas (K) del laberinto la señalan. Hacen falta ${MARCAS_PARA_SALIR}.`],
     fin: null,
   };
@@ -402,6 +403,70 @@ export function comportamientoLinea(patron, tipo, indice) {
   const flecha = h ? (l.dir > 0 ? "→" : "←") : (l.dir > 0 ? "↓" : "↑");
   if (l.modo === "cada2") return { modo: l.modo, dir: l.dir, glifo: flecha + "₂", texto: `se desplaza una celda hacia la ${lado(l.dir)}, pero solo en los giros pares` };
   return { modo: l.modo, dir: l.dir, glifo: flecha, texto: `se desplaza una celda hacia la ${lado(l.dir)} en cada giro` };
+}
+
+// ---------- hipótesis ----------
+// El jugador afirma algo sobre un grupo de líneas y el laberinto responde "sí", "no" o "en parte".
+const Fs = (...is) => is.map((i) => ({ tipo: "fila", indice: i }));
+const Cs = (...is) => is.map((i) => ({ tipo: "columna", indice: i }));
+export const SUJETOS = [
+  { id: "norte", nombre: "las filas pares del norte (2, 4, 6)", lineas: Fs(1, 3, 5) },
+  { id: "sur", nombre: "las filas pares del sur (10, 12, 14)", lineas: Fs(9, 11, 13) },
+  { id: "filasPares", nombre: "todas las filas pares", lineas: Fs(1, 3, 5, 9, 11, 13) },
+  { id: "cercanas", nombre: "las filas pegadas a la ciudad (6 y 10)", lineas: Fs(5, 9) },
+  { id: "lejanas", nombre: "las filas más lejanas (2 y 14)", lineas: Fs(1, 13) },
+  { id: "oeste", nombre: "las columnas pares del oeste (B, D, F)", lineas: Cs(1, 3, 5) },
+  { id: "este", nombre: "las columnas pares del este (J, L, N)", lineas: Cs(9, 11, 13) },
+  { id: "columnasPares", nombre: "todas las columnas pares", lineas: Cs(1, 3, 5, 9, 11, 13) },
+  { id: "borde", nombre: "el borde (filas 1 y 15, columnas A y O)", lineas: [...Fs(0, 14), ...Cs(0, 14)] },
+  { id: "filasImpares", nombre: "las filas impares (3, 5, 11, 13)", lineas: Fs(2, 4, 10, 12) },
+  { id: "columnasImpares", nombre: "las columnas impares (C, E, K, M)", lineas: Cs(2, 4, 10, 12) },
+];
+export const PREDICADOS = [
+  { id: "mueve", nombre: "se mueven", prueba: (l) => !!l },
+  { id: "quieta", nombre: "no se mueven", prueba: (l) => !l },
+  { id: "positivo", nombre: "van hacia la derecha (o hacia abajo) en cada giro", prueba: (l) => !!l && l.modo === "fijo" && l.dir > 0 },
+  { id: "negativo", nombre: "van hacia la izquierda (o hacia arriba) en cada giro", prueba: (l) => !!l && l.modo === "fijo" && l.dir < 0 },
+  { id: "alterna", nombre: "van y vuelven", prueba: (l) => !!l && l.modo === "alterna" },
+  { id: "cada2", nombre: "se mueven solo en los giros pares", prueba: (l) => !!l && l.modo === "cada2" },
+];
+// Predicados que, si la respuesta es "sí", dejan la línea completamente conocida.
+const PREDICADOS_COMPLETOS = new Set(["quieta", "positivo", "negativo", "alterna", "cada2"]);
+
+export function sujetoDe(id, indice) {
+  if (id === "fila" || id === "columna") return { id, nombre: "la " + nombreLinea(id, indice), lineas: [{ tipo: id, indice }] };
+  return SUJETOS.find((x) => x.id === id) || null;
+}
+
+export function evaluarHipotesis(patron, sujeto, predicado) {
+  const aciertos = sujeto.lineas.filter((l) => predicado.prueba(lineaDePatron(patron, l.tipo, l.indice))).length;
+  const total = sujeto.lineas.length;
+  const respuesta = aciertos === total ? "sí" : aciertos === 0 ? "no" : "en parte";
+  return { respuesta, aciertos, total };
+}
+
+export function preguntar(s, sujetoId, predicadoId, indice = null) {
+  if (s.fin) return s;
+  const sujeto = sujetoDe(sujetoId, indice);
+  const predicado = PREDICADOS.find((p) => p.id === predicadoId);
+  if (!sujeto || !predicado) return s;
+  const clave = `${sujeto.id}:${indice ?? ""}:${predicado.id}`;
+  if (s.hipotesis.some((h) => h.clave === clave)) return s;
+  if (s.conocimiento < COSTO_CONSULTA) return s;
+  const r = evaluarHipotesis(s.patron, sujeto, predicado);
+  const texto = `${sujeto.nombre} ${predicado.nombre}`;
+  const detalle = r.respuesta === "en parte" ? ` (${r.aciertos} de ${r.total})` : "";
+  let lineasConocidas = s.lineasConocidas;
+  if (r.respuesta === "sí" && PREDICADOS_COMPLETOS.has(predicado.id)) {
+    lineasConocidas = { ...lineasConocidas };
+    for (const l of sujeto.lineas) {
+      const k = claveLinea(l.tipo, l.indice);
+      if (!lineasConocidas[k]) lineasConocidas[k] = { tipo: l.tipo, indice: l.indice, ...comportamientoLinea(s.patron, l.tipo, l.indice) };
+    }
+  }
+  const h = { clave, texto, respuesta: r.respuesta, aciertos: r.aciertos, total: r.total };
+  return log({ ...s, conocimiento: s.conocimiento - COSTO_CONSULTA, lineasConocidas, hipotesis: [...s.hipotesis, h] },
+    `Sala de mapas: «${texto}». Respuesta: ${r.respuesta}${detalle}.`);
 }
 
 export function consultarLinea(s, tipo, indice) {

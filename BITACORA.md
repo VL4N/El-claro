@@ -8,6 +8,26 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-22 · Sesión 14: la sala de mapas responde hipótesis
+
+**Hecho**
+
+- La sala de mapas ya no pregunta "¿qué hace la fila 4?". El jugador arma una afirmación con un sujeto (un grupo como "las filas pares del norte" o "el borde", o una fila o columna suelta) y un predicado ("se mueven", "van hacia la derecha en cada giro", "van y vuelven", "se mueven solo en los giros pares", "no se mueven"). Cuesta 1 conocimiento y el laberinto responde **sí**, **no** o **en parte**, con el conteo ("2 de 3").
+- Un "sí" sobre el sentido o el ritmo deja todas esas líneas marcadas en los bordes del tablero. Un "sí" a "se mueven" no marca nada, porque no dice hacia dónde.
+- Las hipótesis hechas quedan listadas con su respuesta. Repetir una no cuesta.
+
+**Decidido**
+
+- **Preguntar por grupos es más barato que por líneas, si se acierta.** Una hipótesis correcta sobre un grupo de seis filas vale seis consultas de antes por un solo conocimiento. Motivo: premia pensar antes de preguntar. Quien pregunta línea por línea gasta todo el conocimiento; quien observa el historial y formula bien, no.
+- **"En parte" dice cuántas.** Motivo: una respuesta "en parte" sin número sería frustrante; con el número, es una pista que ayuda a afinar la siguiente hipótesis.
+- **Los grupos coinciden con cómo están construidos los patrones** (norte, sur, pares, impares, borde, cercanas, lejanas, columnas). Motivo: todo patrón de la biblioteca se puede describir completo con dos o tres hipótesis bien elegidas, y ninguna hipótesis es inútil para todos los patrones.
+
+**Siguiente**
+
+- Pruebas con personas nuevas y la puerta de la fase 2.
+
+---
+
 ## 2026-10-22 · Sesión 13: dificultad según la partida
 
 **Hecho**

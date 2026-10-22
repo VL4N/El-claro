@@ -81,6 +81,12 @@
   .sala > span { color: var(--suave); }
   .sala .fila { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
   .sala select { font-family: inherit; font-size: 14px; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--tinta); background: var(--tarjeta); color: var(--tinta); }
+  .sala select { max-width: 100%; }
+  .hipotesis { margin-top: 8px; font-size: 13px; }
+  .hipotesis p { margin: 0 0 3px; }
+  .hipotesis .si { color: var(--salida); font-weight: bold; }
+  .hipotesis .no { color: var(--acento); font-weight: bold; }
+  .hipotesis .parte { color: var(--marca); font-weight: bold; }
   .reglas { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
   .reglas span { border: 1px solid var(--borde); border-radius: 999px; padding: 2px 8px; font-size: 12px; }
   .fila-extra button { font-size: 13px; }
@@ -161,11 +167,15 @@
   </div>
   <div class="sala">
     <b>Sala de mapas</b>
-    <span>Pregunta qué hace una fila o una columna en cada giro. Cuesta 1 conocimiento. Lo confirmado se marca en los bordes del tablero.</span>
+    <span>Afirma algo sobre el laberinto y gasta 1 conocimiento: el laberinto responde sí, no o en parte. Un "sí" sobre el sentido o el ritmo marca esas líneas en los bordes del tablero.</span>
     <div class="fila">
-      <select id="selLinea"></select>
+      <select id="selSujeto"></select>
+    </div>
+    <div class="fila">
+      <select id="selPredicado"></select>
       <button id="btnConsultar">Preguntar</button>
     </div>
+    <div id="hipotesis" class="hipotesis"></div>
     <div id="reglas" class="reglas"></div>
   </div>
 </section>
@@ -179,7 +189,7 @@
     <p><b>Todo pasa a la vez.</b> Pulsa Jugar y el tiempo corre. Pausa cuando quieras para pensar; también con la barra espaciadora.</p>
     <p><b>Explorar.</b> El laberinto empieza a oscuras: solo se conoce lo que rodea a la ciudad. Los corredores destapan lo que ven a su paso. Toca un corredor y luego una celda, aunque sea desconocida, para darle destino.</p>
     <p><b>Raciones.</b> En la ciudad elige cuántas lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. El juego recomienda cuántas necesita para ir y volver, con margen por lo que no se ha explorado. La tarjeta de cada corredor muestra el tiempo que le queda y avisa si no le alcanza para volver.</p>
-    <p><b>El giro.</b> Cada 60 segundos algunas filas o columnas se desplazan. Cuáles y hacia dónde cambia en cada partida: hay que descubrirlo. Las celdas a la vista que cambiaron se marcan, el mapa chico de la pestaña Mapas muestra cómo lo conocías antes de cada giro (con flechas para recorrer el historial), las marcas que lees cuentan algo del patrón en palabras, y en la sala de mapas puedes gastar conocimiento para confirmar qué hace una fila o columna. Lo visto antes de un giro se muestra apagado porque puede haber cambiado.</p>
+    <p><b>El giro.</b> Cada 60 segundos algunas filas o columnas se desplazan. Cuáles y hacia dónde cambia en cada partida: hay que descubrirlo. Las celdas a la vista que cambiaron se marcan, el mapa chico de la pestaña Mapas muestra cómo lo conocías antes de cada giro (con flechas para recorrer el historial), las marcas que lees cuentan algo del patrón en palabras, y en la sala de mapas puedes gastar conocimiento para poner a prueba una hipótesis ("las filas pares del norte van hacia la derecha"): el laberinto responde sí, no o en parte, y un sí deja esas líneas marcadas en los bordes. Lo visto antes de un giro se muestra apagado porque puede haber cambiado.</p>
     <p><b>Hallazgos.</b> Los escombros (M) dan materiales; las marcas (K), conocimiento. Con 4 materiales se construye un huerto; con 5, el taller (los corredores caminan el doble de rápido). Reclutar un corredor cuesta 3 materiales y 2 de comida, hasta 6.</p>
     <p><b>Dificultad.</b> Cada partida usa un patrón de giro distinto. Las primeras partidas reciben patrones fáciles; cada victoria sube un nivel, hasta 5. Abajo se puede fijar a mano.</p>
     <p><b>La salida.</b> Nadie sabe dónde está. Al leer 4 marcas aparece en el mapa, y entonces hay que llegar con un corredor antes de que se acabe el tiempo (8 minutos).</p>
@@ -515,6 +525,7 @@ function nuevaPartida(semilla = Date.now() % 1000000, patronFijo = null, dificul
     corredores, salidaAlcanzada: false, salidaConocida: false,
     conocidoAnterior: null, cambiosGiro: [], cambiosEn: -100,
     lineasConocidas: {},  // "f3" o "c5" -> lo que la sala de mapas confirmó
+    hipotesis: [],        // preguntas hechas en la sala de mapas, con su respuesta
     registro: [`El Claro despierta. Nadie sabe dónde está la salida: las marcas (K) del laberinto la señalan. Hacen falta ${MARCAS_PARA_SALIR}.`],
     fin: null,
   };
@@ -604,6 +615,70 @@ function comportamientoLinea(patron, tipo, indice) {
   const flecha = h ? (l.dir > 0 ? "→" : "←") : (l.dir > 0 ? "↓" : "↑");
   if (l.modo === "cada2") return { modo: l.modo, dir: l.dir, glifo: flecha + "₂", texto: `se desplaza una celda hacia la ${lado(l.dir)}, pero solo en los giros pares` };
   return { modo: l.modo, dir: l.dir, glifo: flecha, texto: `se desplaza una celda hacia la ${lado(l.dir)} en cada giro` };
+}
+
+// ---------- hipótesis ----------
+// El jugador afirma algo sobre un grupo de líneas y el laberinto responde "sí", "no" o "en parte".
+const Fs = (...is) => is.map((i) => ({ tipo: "fila", indice: i }));
+const Cs = (...is) => is.map((i) => ({ tipo: "columna", indice: i }));
+const SUJETOS = [
+  { id: "norte", nombre: "las filas pares del norte (2, 4, 6)", lineas: Fs(1, 3, 5) },
+  { id: "sur", nombre: "las filas pares del sur (10, 12, 14)", lineas: Fs(9, 11, 13) },
+  { id: "filasPares", nombre: "todas las filas pares", lineas: Fs(1, 3, 5, 9, 11, 13) },
+  { id: "cercanas", nombre: "las filas pegadas a la ciudad (6 y 10)", lineas: Fs(5, 9) },
+  { id: "lejanas", nombre: "las filas más lejanas (2 y 14)", lineas: Fs(1, 13) },
+  { id: "oeste", nombre: "las columnas pares del oeste (B, D, F)", lineas: Cs(1, 3, 5) },
+  { id: "este", nombre: "las columnas pares del este (J, L, N)", lineas: Cs(9, 11, 13) },
+  { id: "columnasPares", nombre: "todas las columnas pares", lineas: Cs(1, 3, 5, 9, 11, 13) },
+  { id: "borde", nombre: "el borde (filas 1 y 15, columnas A y O)", lineas: [...Fs(0, 14), ...Cs(0, 14)] },
+  { id: "filasImpares", nombre: "las filas impares (3, 5, 11, 13)", lineas: Fs(2, 4, 10, 12) },
+  { id: "columnasImpares", nombre: "las columnas impares (C, E, K, M)", lineas: Cs(2, 4, 10, 12) },
+];
+const PREDICADOS = [
+  { id: "mueve", nombre: "se mueven", prueba: (l) => !!l },
+  { id: "quieta", nombre: "no se mueven", prueba: (l) => !l },
+  { id: "positivo", nombre: "van hacia la derecha (o hacia abajo) en cada giro", prueba: (l) => !!l && l.modo === "fijo" && l.dir > 0 },
+  { id: "negativo", nombre: "van hacia la izquierda (o hacia arriba) en cada giro", prueba: (l) => !!l && l.modo === "fijo" && l.dir < 0 },
+  { id: "alterna", nombre: "van y vuelven", prueba: (l) => !!l && l.modo === "alterna" },
+  { id: "cada2", nombre: "se mueven solo en los giros pares", prueba: (l) => !!l && l.modo === "cada2" },
+];
+// Predicados que, si la respuesta es "sí", dejan la línea completamente conocida.
+const PREDICADOS_COMPLETOS = new Set(["quieta", "positivo", "negativo", "alterna", "cada2"]);
+
+function sujetoDe(id, indice) {
+  if (id === "fila" || id === "columna") return { id, nombre: "la " + nombreLinea(id, indice), lineas: [{ tipo: id, indice }] };
+  return SUJETOS.find((x) => x.id === id) || null;
+}
+
+function evaluarHipotesis(patron, sujeto, predicado) {
+  const aciertos = sujeto.lineas.filter((l) => predicado.prueba(lineaDePatron(patron, l.tipo, l.indice))).length;
+  const total = sujeto.lineas.length;
+  const respuesta = aciertos === total ? "sí" : aciertos === 0 ? "no" : "en parte";
+  return { respuesta, aciertos, total };
+}
+
+function preguntar(s, sujetoId, predicadoId, indice = null) {
+  if (s.fin) return s;
+  const sujeto = sujetoDe(sujetoId, indice);
+  const predicado = PREDICADOS.find((p) => p.id === predicadoId);
+  if (!sujeto || !predicado) return s;
+  const clave = `${sujeto.id}:${indice ?? ""}:${predicado.id}`;
+  if (s.hipotesis.some((h) => h.clave === clave)) return s;
+  if (s.conocimiento < COSTO_CONSULTA) return s;
+  const r = evaluarHipotesis(s.patron, sujeto, predicado);
+  const texto = `${sujeto.nombre} ${predicado.nombre}`;
+  const detalle = r.respuesta === "en parte" ? ` (${r.aciertos} de ${r.total})` : "";
+  let lineasConocidas = s.lineasConocidas;
+  if (r.respuesta === "sí" && PREDICADOS_COMPLETOS.has(predicado.id)) {
+    lineasConocidas = { ...lineasConocidas };
+    for (const l of sujeto.lineas) {
+      const k = claveLinea(l.tipo, l.indice);
+      if (!lineasConocidas[k]) lineasConocidas[k] = { tipo: l.tipo, indice: l.indice, ...comportamientoLinea(s.patron, l.tipo, l.indice) };
+    }
+  }
+  const h = { clave, texto, respuesta: r.respuesta, aciertos: r.aciertos, total: r.total };
+  return log({ ...s, conocimiento: s.conocimiento - COSTO_CONSULTA, lineasConocidas, hipotesis: [...s.hipotesis, h] },
+    `Sala de mapas: «${texto}». Respuesta: ${r.respuesta}${detalle}.`);
 }
 
 function consultarLinea(s, tipo, indice) {
@@ -849,7 +924,7 @@ function puntos(s) {
   return s.materiales + s.conocimiento + (s.salidaAlcanzada ? PUNTOS_SALIDA : 0);
 }
 
-return { ANCHO, ALTO, TICK_ECONOMIA, CICLO, TURNOS_MAX, CAPACIDAD, COSTO_HUERTO, COSTO_TALLER, COSTO_ATAJO, PUNTOS_SALIDA, RACIONES_MAX, MARCAS_PARA_SALIR, CORREDORES_MAX, COSTO_RECLUTA, casa, crearRng, esCiudad, enTablero, celda, pasable, BIBLIOTECA, DIFICULTAD_MAX, elegirPatron, dificultadSugerida, pistasDePatron, pasoLinea, lineaDePatron, desplazarMapa, desplazarCoord, camino, distancias, celdaCiudadMasCercana, evaluarMapa, generarMapa, VISION, VISION_CIUDAD, nuevaPartida, revelar, visibleAhora, mapaPlan, revelarTodo, velocidad, produccion, CONSUMO, construir, reclutar, COSTO_CONSULTA, claveLinea, nombreLinea, comportamientoLinea, consultarLinea, enviar, cambiarDestino, volver, usarAtajo, coord, avanzar, terminarTurno, ticksHastaGiro, ticksHastaRacion, estimarViaje, tiempoRestante, puntos };
+return { ANCHO, ALTO, TICK_ECONOMIA, CICLO, TURNOS_MAX, CAPACIDAD, COSTO_HUERTO, COSTO_TALLER, COSTO_ATAJO, PUNTOS_SALIDA, RACIONES_MAX, MARCAS_PARA_SALIR, CORREDORES_MAX, COSTO_RECLUTA, casa, crearRng, esCiudad, enTablero, celda, pasable, BIBLIOTECA, DIFICULTAD_MAX, elegirPatron, dificultadSugerida, pistasDePatron, pasoLinea, lineaDePatron, desplazarMapa, desplazarCoord, camino, distancias, celdaCiudadMasCercana, evaluarMapa, generarMapa, VISION, VISION_CIUDAD, nuevaPartida, revelar, visibleAhora, mapaPlan, revelarTodo, velocidad, produccion, CONSUMO, construir, reclutar, COSTO_CONSULTA, claveLinea, nombreLinea, comportamientoLinea, SUJETOS, PREDICADOS, sujetoDe, evaluarHipotesis, preguntar, consultarLinea, enviar, cambiarDestino, volver, usarAtajo, coord, avanzar, terminarTurno, ticksHastaGiro, ticksHastaRacion, estimarViaje, tiempoRestante, puntos };
 })();
 
 
@@ -1072,16 +1147,28 @@ function render() {
   $("pistas").innerHTML = s.pistasLeidas.length
     ? s.pistasLeidas.map((t) => `<p>«${t}»</p>`).join("")
     : `<span class="nota">Todavía no leíste ninguna marca. Cada una cuenta algo del patrón del laberinto.</span>`;
-  const sel = $("selLinea");
-  if (!sel.options.length) {
-    for (let y = 0; y < N; y++) { const o = document.createElement("option"); o.value = "fila:" + y; o.textContent = `Fila ${y + 1}`; sel.appendChild(o); }
-    for (let x = 0; x < N; x++) { const o = document.createElement("option"); o.value = "columna:" + x; o.textContent = `Columna ${"ABCDEFGHIJKLMNO"[x]}`; sel.appendChild(o); }
+  const selS = $("selSujeto"), selP = $("selPredicado");
+  if (!selS.options.length) {
+    const g1 = document.createElement("optgroup"); g1.label = "Grupos";
+    for (const su of M.SUJETOS) { const o = document.createElement("option"); o.value = su.id + ":"; o.textContent = su.nombre; g1.appendChild(o); }
+    const g2 = document.createElement("optgroup"); g2.label = "Una fila";
+    for (let y = 0; y < N; y++) { const o = document.createElement("option"); o.value = "fila:" + y; o.textContent = `la fila ${y + 1}`; g2.appendChild(o); }
+    const g3 = document.createElement("optgroup"); g3.label = "Una columna";
+    for (let x = 0; x < N; x++) { const o = document.createElement("option"); o.value = "columna:" + x; o.textContent = `la columna ${"ABCDEFGHIJKLMNO"[x]}`; g3.appendChild(o); }
+    selS.append(g1, g2, g3);
+    for (const pr of M.PREDICADOS) { const o = document.createElement("option"); o.value = pr.id; o.textContent = pr.nombre; selP.appendChild(o); }
   }
-  const [tq, iq] = sel.value.split(":");
-  const kq = M.claveLinea(tq, +iq);
+  const [sid, sidx] = selS.value.split(":");
+  const claveH = `${sid}:${sidx}:${selP.value}`;
+  const yaHecha = s.hipotesis.some((h) => h.clave === claveH);
   const bc = $("btnConsultar");
-  bc.disabled = !!s.fin || !!s.lineasConocidas[kq] || s.conocimiento < M.COSTO_CONSULTA;
-  bc.textContent = s.lineasConocidas[kq] ? "Ya confirmada" : `Preguntar (${M.COSTO_CONSULTA} conoc.)`;
+  bc.disabled = !!s.fin || yaHecha || s.conocimiento < M.COSTO_CONSULTA;
+  bc.textContent = yaHecha ? "Ya preguntada" : `Preguntar (${M.COSTO_CONSULTA} conoc.)`;
+  $("hipotesis").innerHTML = s.hipotesis.slice().reverse().map((h) => {
+    const cls = h.respuesta === "sí" ? "si" : h.respuesta === "no" ? "no" : "parte";
+    const det = h.respuesta === "en parte" ? ` (${h.aciertos} de ${h.total})` : "";
+    return `<p>«${h.texto}»: <span class="${cls}">${h.respuesta}${det}</span></p>`;
+  }).join("");
   $("reglas").innerHTML = Object.values(s.lineasConocidas)
     .sort((a, b) => (a.tipo === b.tipo ? a.indice - b.indice : a.tipo === "fila" ? -1 : 1))
     .map((l) => `<span>${M.nombreLinea(l.tipo, l.indice)}: ${l.glifo} ${l.modo === "quieta" ? "quieta" : l.modo === "alterna" ? "va y vuelve" : l.modo === "cada2" ? "solo giros pares" : "cada giro"}</span>`).join("");
@@ -1158,8 +1245,9 @@ cv.addEventListener("click", (ev) => {
 
 $("btnHuerto").onclick = () => { s = M.construir(s, "huerto"); render(); };
 $("btnReclutar").onclick = () => { s = M.reclutar(s); render(); };
-$("btnConsultar").onclick = () => { const [t, i] = $("selLinea").value.split(":"); s = M.consultarLinea(s, t, +i); render(); };
-$("selLinea").onchange = () => render();
+$("btnConsultar").onclick = () => { const [sid, sidx] = $("selSujeto").value.split(":"); s = M.preguntar(s, sid, $("selPredicado").value, sidx === "" ? null : +sidx); render(); };
+$("selSujeto").onchange = () => render();
+$("selPredicado").onchange = () => render();
 $("selDificultad").onchange = () => { try { localStorage.setItem("elclaro.dificultad", $("selDificultad").value); } catch {} render(); };
 $("giroPrev").onclick = () => { const i = s.historial.indexOf(entradaHistorial()); giroVisto = Math.max(0, i - 1); render(); };
 $("giroNext").onclick = () => { const i = s.historial.indexOf(entradaHistorial()); giroVisto = i + 1 >= s.historial.length - 1 ? null : i + 1; render(); };
