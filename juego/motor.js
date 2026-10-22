@@ -12,6 +12,7 @@ export const COSTO_HUERTO = 4;
 export const COSTO_TALLER = 5;
 export const COSTO_ATAJO = 2;      // conocimiento para atravesar una pared
 export const PUNTOS_SALIDA = 10;
+export const RACIONES_MAX = 10;
 
 const NOMBRES = ["Ira", "Teo", "Noa"];
 const FILAS_DERECHA = [1, 3, 5];     // filas (base 0) que giran a la derecha: mitad norte
@@ -203,7 +204,7 @@ export function nuevaPartida(semilla = Date.now() % 1000000) {
   }));
   return {
     semilla, turno: 1, mapa: gen.mapa,
-    comida: 10, materiales: 0, conocimiento: 0, hambre: 0,
+    comida: 14, materiales: 0, conocimiento: 0, hambre: 0,
     huertos: 0, taller: false,
     corredores, salidaAlcanzada: false,
     registro: [`El Claro despierta. Tres corredores esperan en la plaza.`],
@@ -214,7 +215,7 @@ export function nuevaPartida(semilla = Date.now() % 1000000) {
 const log = (s, texto) => ({ ...s, registro: [...s.registro, texto] });
 
 export function velocidad(s) { return s.taller ? 2 : 1; }
-export function produccion(s) { return 2 + 2 * s.huertos; }
+export function produccion(s) { return 3 + 2 * s.huertos; }
 export const CONSUMO = 2;
 
 // ---------- acciones del jugador (durante el turno) ----------
@@ -238,7 +239,7 @@ export function enviar(s, id, destino, raciones) {
   const c = s.corredores[id];
   if (c.estado !== "ciudad") return s;
   if (!pasable(s.mapa, destino.x, destino.y) || celda(s.mapa, destino.x, destino.y) === "C") return s;
-  raciones = Math.max(1, Math.min(8, raciones | 0));
+  raciones = Math.max(1, Math.min(RACIONES_MAX, raciones | 0));
   if (s.comida < raciones) return s;
   const salida = celdaCiudadMasCercana(s.mapa, destino);
   if (!salida) return s;
@@ -399,6 +400,29 @@ export function avanzar(s) {
 export const terminarTurno = avanzar;
 export const ticksHastaGiro = (s) => CICLO - ((s.turno - 1) % CICLO);
 export const ticksHastaRacion = (s) => TICK_ECONOMIA - ((s.turno - 1) % TICK_ECONOMIA);
+
+// Estima un viaje de ida y vuelta desde la ciudad hasta `destino` con el laberinto como está ahora.
+// Devuelve null si no hay camino. `margen` suma raciones por si el laberinto gira en el camino.
+export function estimarViaje(s, destino, margen = 1) {
+  const salida = celdaCiudadMasCercana(s.mapa, destino);
+  if (!salida) return null;
+  const ida = camino(s.mapa, salida, destino);
+  if (!ida) return null;
+  const vuelta = celdaCiudadMasCercana(s.mapa, destino);
+  const celdas = ida.length + (vuelta ? vuelta.pasos : ida.length);
+  const ticks = Math.ceil(celdas / velocidad(s));
+  const raciones = Math.min(RACIONES_MAX, Math.ceil(ticks / TICK_ECONOMIA) + margen);
+  return { ida: ida.length, vuelta: vuelta ? vuelta.pasos : null, celdas, ticks, raciones };
+}
+
+// Ticks que le quedan a un corredor fuera antes de perderse, y si le alcanza para volver.
+export function tiempoRestante(s, c) {
+  if (c.estado !== "fuera") return null;
+  const ticks = (c.raciones - 1) * TICK_ECONOMIA + ticksHastaRacion(s);
+  const casa = celdaCiudadMasCercana(s.mapa, c);
+  const ticksVuelta = casa ? Math.ceil(casa.pasos / velocidad(s)) : null;
+  return { ticks, ticksVuelta, alcanza: ticksVuelta !== null && ticksVuelta <= ticks };
+}
 
 export function puntos(s) {
   return s.materiales + s.conocimiento + (s.salidaAlcanzada ? PUNTOS_SALIDA : 0);

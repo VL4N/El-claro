@@ -54,6 +54,8 @@
   .tarjeta.sel { border-color: var(--acento); }
   .tarjeta b { display: block; font-size: 15px; }
   .tarjeta.perdido, .tarjeta.salio { opacity: .55; }
+  .tarjeta .aviso { display: block; color: var(--acento); font-size: 12px; margin-top: 2px; }
+  .tarjeta .tiempo-restante { display: block; color: var(--suave); font-size: 12px; margin-top: 2px; }
   .acciones { margin-top: 10px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 10px; min-height: 48px; }
   .acciones .fila { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   button { font-family: inherit; font-size: 14px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--tinta); background: var(--tarjeta); color: var(--tinta); cursor: pointer; }
@@ -102,7 +104,7 @@
 <div class="registro" id="registro"></div>
 
 <div class="leyenda">
-  <b>Cómo se juega.</b> Todo pasa a la vez: pulsa Jugar y el tiempo corre. Puedes pausar cuando quieras para pensar. Toca un corredor y luego una celda para darle destino. En la ciudad elige cuántas raciones lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. Las filas sombreadas giran cada 36 segundos: las del norte a la derecha, las del sur a la izquierda. Los escombros (M) dan materiales, las marcas (K) conocimiento. Con 4 materiales se construye un huerto; con 5, el taller. Gana quien cruza la salida (S) antes de que se acabe el tiempo (6 minutos).
+  <b>Cómo se juega.</b> Todo pasa a la vez: pulsa Jugar y el tiempo corre. Puedes pausar cuando quieras para pensar. Toca un corredor y luego una celda para darle destino. En la ciudad elige cuántas raciones lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. El juego te recomienda cuántas necesita para ir y volver; la tarjeta de cada corredor muestra cuánto tiempo le queda y avisa si no le alcanza para volver. La ciudad produce 3 de comida y consume 2 cada 6 segundos; un huerto suma 2 más. Las filas sombreadas giran cada 36 segundos: las del norte a la derecha, las del sur a la izquierda. Los escombros (M) dan materiales, las marcas (K) conocimiento. Con 4 materiales se construye un huerto; con 5, el taller. Gana quien cruza la salida (S) antes de que se acabe el tiempo (6 minutos).
 </div>
 <div class="pie">Prototipo de la fase 1, tiempo real. Semilla <span id="semilla"></span>. <a href="#" id="btnNueva">Nueva partida</a> · <a href="#" id="btnCopiar">Copiar registro de partidas</a></div>
 
@@ -129,6 +131,7 @@ const COSTO_HUERTO = 4;
 const COSTO_TALLER = 5;
 const COSTO_ATAJO = 2;      // conocimiento para atravesar una pared
 const PUNTOS_SALIDA = 10;
+const RACIONES_MAX = 10;
 
 const NOMBRES = ["Ira", "Teo", "Noa"];
 const FILAS_DERECHA = [1, 3, 5];     // filas (base 0) que giran a la derecha: mitad norte
@@ -320,7 +323,7 @@ function nuevaPartida(semilla = Date.now() % 1000000) {
   }));
   return {
     semilla, turno: 1, mapa: gen.mapa,
-    comida: 10, materiales: 0, conocimiento: 0, hambre: 0,
+    comida: 14, materiales: 0, conocimiento: 0, hambre: 0,
     huertos: 0, taller: false,
     corredores, salidaAlcanzada: false,
     registro: [`El Claro despierta. Tres corredores esperan en la plaza.`],
@@ -331,7 +334,7 @@ function nuevaPartida(semilla = Date.now() % 1000000) {
 const log = (s, texto) => ({ ...s, registro: [...s.registro, texto] });
 
 function velocidad(s) { return s.taller ? 2 : 1; }
-function produccion(s) { return 2 + 2 * s.huertos; }
+function produccion(s) { return 3 + 2 * s.huertos; }
 const CONSUMO = 2;
 
 // ---------- acciones del jugador (durante el turno) ----------
@@ -355,7 +358,7 @@ function enviar(s, id, destino, raciones) {
   const c = s.corredores[id];
   if (c.estado !== "ciudad") return s;
   if (!pasable(s.mapa, destino.x, destino.y) || celda(s.mapa, destino.x, destino.y) === "C") return s;
-  raciones = Math.max(1, Math.min(8, raciones | 0));
+  raciones = Math.max(1, Math.min(RACIONES_MAX, raciones | 0));
   if (s.comida < raciones) return s;
   const salida = celdaCiudadMasCercana(s.mapa, destino);
   if (!salida) return s;
@@ -517,11 +520,34 @@ const terminarTurno = avanzar;
 const ticksHastaGiro = (s) => CICLO - ((s.turno - 1) % CICLO);
 const ticksHastaRacion = (s) => TICK_ECONOMIA - ((s.turno - 1) % TICK_ECONOMIA);
 
+// Estima un viaje de ida y vuelta desde la ciudad hasta `destino` con el laberinto como está ahora.
+// Devuelve null si no hay camino. `margen` suma raciones por si el laberinto gira en el camino.
+function estimarViaje(s, destino, margen = 1) {
+  const salida = celdaCiudadMasCercana(s.mapa, destino);
+  if (!salida) return null;
+  const ida = camino(s.mapa, salida, destino);
+  if (!ida) return null;
+  const vuelta = celdaCiudadMasCercana(s.mapa, destino);
+  const celdas = ida.length + (vuelta ? vuelta.pasos : ida.length);
+  const ticks = Math.ceil(celdas / velocidad(s));
+  const raciones = Math.min(RACIONES_MAX, Math.ceil(ticks / TICK_ECONOMIA) + margen);
+  return { ida: ida.length, vuelta: vuelta ? vuelta.pasos : null, celdas, ticks, raciones };
+}
+
+// Ticks que le quedan a un corredor fuera antes de perderse, y si le alcanza para volver.
+function tiempoRestante(s, c) {
+  if (c.estado !== "fuera") return null;
+  const ticks = (c.raciones - 1) * TICK_ECONOMIA + ticksHastaRacion(s);
+  const casa = celdaCiudadMasCercana(s.mapa, c);
+  const ticksVuelta = casa ? Math.ceil(casa.pasos / velocidad(s)) : null;
+  return { ticks, ticksVuelta, alcanza: ticksVuelta !== null && ticksVuelta <= ticks };
+}
+
 function puntos(s) {
   return s.materiales + s.conocimiento + (s.salidaAlcanzada ? PUNTOS_SALIDA : 0);
 }
 
-return { ANCHO, ALTO, TICK_ECONOMIA, CICLO, TURNOS_MAX, CAPACIDAD, COSTO_HUERTO, COSTO_TALLER, COSTO_ATAJO, PUNTOS_SALIDA, FILAS_MOVILES, crearRng, esCiudad, enTablero, celda, pasable, desplazarMapa, desplazarCoord, camino, distancias, celdaCiudadMasCercana, evaluarMapa, generarMapa, nuevaPartida, velocidad, produccion, CONSUMO, construir, enviar, cambiarDestino, volver, usarAtajo, coord, avanzar, terminarTurno, ticksHastaGiro, ticksHastaRacion, puntos };
+return { ANCHO, ALTO, TICK_ECONOMIA, CICLO, TURNOS_MAX, CAPACIDAD, COSTO_HUERTO, COSTO_TALLER, COSTO_ATAJO, PUNTOS_SALIDA, RACIONES_MAX, FILAS_MOVILES, crearRng, esCiudad, enTablero, celda, pasable, desplazarMapa, desplazarCoord, camino, distancias, celdaCiudadMasCercana, evaluarMapa, generarMapa, nuevaPartida, velocidad, produccion, CONSUMO, construir, enviar, cambiarDestino, volver, usarAtajo, coord, avanzar, terminarTurno, ticksHastaGiro, ticksHastaRacion, estimarViaje, tiempoRestante, puntos };
 })();
 
 
@@ -529,13 +555,13 @@ const $ = (id) => document.getElementById(id);
 const cv = $("tablero"), ctx = cv.getContext("2d");
 const N = M.ANCHO, TAM = cv.width / N;
 
-let s = null, seleccion = null, pendiente = null, raciones = 4, inicio = 0;
+let s = null, seleccion = null, pendiente = null, raciones = null, inicio = 0;
 let pausado = true, velocidadJuego = 1, ultimoTick = 0, posPrevias = new Map(), fraccion = 1;
 const MS_TICK = 1000;
 
 function nueva(semilla) {
   s = M.nuevaPartida(semilla);
-  seleccion = null; pendiente = null; raciones = 4; inicio = Date.now();
+  seleccion = null; pendiente = null; raciones = null; inicio = Date.now();
   pausado = true; posPrevias = new Map(); fraccion = 1; ultimoTick = performance.now();
   $("fin").style.display = "none";
   render();
@@ -650,7 +676,13 @@ function render() {
   $("corredores").innerHTML = s.corredores.map((k) => {
     let estado = { ciudad: "en la ciudad", fuera: `fuera · ${k.raciones} rac.`, perdido: "perdido", salio: "¡salió!" }[k.estado];
     if (k.estado === "fuera" && k.carga) estado += ` · ${k.carga} mat.`;
-    return `<div class="tarjeta ${k.estado} ${seleccion === k.id ? "sel" : ""}" data-id="${k.id}"><b>${k.nombre}</b>${estado}</div>`;
+    let extra = "";
+    if (k.estado === "fuera") {
+      const t = M.tiempoRestante(s, k);
+      extra = `<span class="tiempo-restante">le quedan ${t.ticks} s</span>`;
+      if (!t.alcanza) extra += `<span class="aviso">${t.ticksVuelta === null ? "sin camino a casa" : "no le alcanza para volver"}</span>`;
+    }
+    return `<div class="tarjeta ${k.estado} ${seleccion === k.id ? "sel" : ""}" data-id="${k.id}"><b>${k.nombre}</b>${estado}${extra}</div>`;
   }).join("");
   for (const el of document.querySelectorAll(".tarjeta")) el.onclick = () => seleccionar(+el.dataset.id);
 
@@ -660,20 +692,21 @@ function render() {
     a.innerHTML = `<div class="fila"><span style="color:var(--suave)">Toca un corredor para darle órdenes.</span></div>`;
     $("pista").textContent = "";
   } else if (c.estado === "ciudad") {
-    const ruta = pendiente ? M.camino(s.mapa, c, pendiente, 0) : null;
-    const segundos = ruta ? Math.ceil(ruta.length / M.velocidad(s)) : null;
-    const racionesIda = segundos ? Math.ceil(segundos / M.TICK_ECONOMIA) : null;
+    const est = pendiente ? M.estimarViaje(s, pendiente) : null;
+    if (est && raciones === null) raciones = est.raciones;
+    const r = raciones ?? 4;
     $("pista").textContent = pendiente
-      ? (ruta ? `Destino ${M.coord(pendiente)}: ${ruta.length} celdas, unos ${segundos} s de ida (${racionesIda} ${racionesIda === 1 ? "ración" : "raciones"} solo de ida).` : `No hay camino hasta ${M.coord(pendiente)} con el laberinto así.`)
+      ? (est ? `Hasta ${M.coord(pendiente)}: ${est.ida} celdas de ida y ${est.vuelta ?? "?"} de vuelta, unos ${est.ticks} s en total. Recomendado: ${est.raciones} raciones, una de margen por si el laberinto gira.` : `No hay camino hasta ${M.coord(pendiente)} con el laberinto así.`)
       : `${c.nombre} está en la ciudad. Toca una celda para elegir destino.`;
+    const faltaComida = s.comida < r;
     a.innerHTML = `<div class="fila">
-      <div class="stepper"><button id="menos">−</button><span>${raciones} rac.</span><button id="mas">+</button></div>
-      <button class="primario" id="btnEnviar" ${!pendiente || !ruta || s.comida < raciones ? "disabled" : ""}>Enviar</button>
-      <span style="font-size:12px;color:var(--suave)">cuesta ${raciones} comida</span>
+      <div class="stepper"><button id="menos">−</button><span>${r} rac.</span><button id="mas">+</button></div>
+      <button class="primario" id="btnEnviar" ${!pendiente || !est || faltaComida ? "disabled" : ""}>Enviar</button>
+      <span style="font-size:12px;color:${faltaComida ? "var(--acento)" : "var(--suave)"}">${faltaComida ? `faltan ${r - s.comida} de comida` : `cuesta ${r} comida`}${est && r < est.raciones ? " · justo, sin margen" : ""}</span>
     </div>`;
-    $("menos").onclick = () => { raciones = Math.max(1, raciones - 1); render(); };
-    $("mas").onclick = () => { raciones = Math.min(8, raciones + 1); render(); };
-    $("btnEnviar").onclick = () => { s = M.enviar(s, c.id, pendiente, raciones); pendiente = null; render(); };
+    $("menos").onclick = () => { raciones = Math.max(1, r - 1); render(); };
+    $("mas").onclick = () => { raciones = Math.min(M.RACIONES_MAX, r + 1); render(); };
+    $("btnEnviar").onclick = () => { s = M.enviar(s, c.id, pendiente, r); pendiente = null; raciones = null; render(); };
   } else {
     $("pista").textContent = c.destino
       ? `${c.nombre} va hacia ${M.coord(c.destino)}. Toca otra celda para cambiarlo.`
@@ -692,7 +725,7 @@ function render() {
 
 function seleccionar(id) {
   seleccion = seleccion === id ? null : id;
-  pendiente = null;
+  pendiente = null; raciones = null;
   render();
 }
 
@@ -706,7 +739,7 @@ cv.addEventListener("click", (ev) => {
   const c = seleccion !== null ? s.corredores[seleccion] : null;
   if (!c) { if (sobre) seleccionar(sobre.id); return; }
   if (!M.pasable(s.mapa, x, y)) return;
-  if (c.estado === "ciudad") pendiente = { x, y };
+  if (c.estado === "ciudad") { pendiente = { x, y }; raciones = null; }
   else if (c.estado === "fuera") s = M.cambiarDestino(s, c.id, { x, y });
   render();
 });

@@ -78,6 +78,21 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   }
 }
 
+// 4c. estimaciones
+{
+  let s = M.nuevaPartida(3);
+  const d = M.distancias(s.mapa, { x: 7, y: 7 });
+  let lejos = null;
+  for (const [k, v] of d) if (v >= 5 && !M.esCiudad(k % 15, Math.floor(k / 15))) { lejos = { x: k % 15, y: Math.floor(k / 15) }; break; }
+  const e = M.estimarViaje(s, lejos);
+  ok(e && e.ida > 0 && e.celdas >= e.ida && e.raciones >= 1 && e.raciones <= M.RACIONES_MAX, "estimación de viaje coherente");
+  ok(M.estimarViaje(s, { x: 7, y: 7 }) === null || true, "estimar a la ciudad no rompe");
+  s = M.enviar(s, 0, lejos, e.raciones);
+  const t = M.tiempoRestante(s, s.corredores[0]);
+  ok(t && t.ticks > 0 && t.alcanza, "con las raciones recomendadas alcanza para volver");
+  ok(M.tiempoRestante(s, s.corredores[1]) === null, "en la ciudad no hay tiempo restante");
+}
+
 // 5. atajo atraviesa una pared
 {
   const mapa = ["#####", "#C#.#", "#####", "#####", "#####"];

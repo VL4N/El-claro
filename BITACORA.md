@@ -8,6 +8,27 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-22 · Sesión 5: primer ajuste con partidas reales
+
+**Hecho**
+
+- GitHub Pages activado por el autor y publicación funcionando. El juego vive en https://vl4n.github.io/El-claro/ y se instala como aplicación.
+- Primer comentario del autor tras jugar: "hay muy poca comida para conseguir materiales, y no sé cuántas raciones darle para que no se pierda".
+- Corrección en dos frentes: información y economía.
+
+**Decidido**
+
+- **El juego recomienda las raciones.** Al elegir destino muestra celdas de ida, de vuelta, segundos totales y las raciones recomendadas (ida y vuelta más una de margen por si gira el laberinto), y preselecciona ese número. Motivo: la decisión "mando ahora o espero" solo es interesante si el jugador sabe cuánto cuesta el viaje. Antes era adivinar.
+- **Cada corredor fuera muestra cuánto tiempo le queda y avisa en rojo si no le alcanza para volver.** Motivo: perder un corredor tiene que ser una decisión que se vio venir, no una sorpresa.
+- **Economía: comida inicial 14, la ciudad produce 3 y consume 2** (antes 10, 2 y 2). Motivo: con producción neta cero, la comida inicial era el único presupuesto y se agotaba en dos viajes. Ahora crece 1 cada 6 segundos: esperar tiene valor real, y el huerto sigue siendo la mejora importante. Máximo de raciones por viaje: 10.
+- **Se mantiene que el corredor sin raciones se pierde.** Motivo: es el costo que da peso a la decisión. Se revisa si en las siguientes partidas sigue sintiéndose injusto aun con la información nueva.
+
+**Siguiente**
+
+- Que el autor vuelva a jugar con estos cambios y diga si la comida sigue sintiéndose corta.
+
+---
+
 ## 2026-10-21 · Sesión 4: aplicación instalable
 
 **Hecho**
