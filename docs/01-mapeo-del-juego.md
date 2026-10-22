@@ -57,7 +57,7 @@ Una cuadrícula alrededor de la ciudad. Cada celda es pasillo, pared o punto de 
 
 **Reglas del cambio (el corazón del juego):**
 
-- El laberinto cambia cada cierto tiempo (el "ciclo"). En el prototipo son 36 segundos, y puede variar según el estado de la ciudad.
+- El laberinto cambia cada cierto tiempo (el "ciclo"). En el prototipo son 60 segundos, y puede variar según el estado de la ciudad.
 - Los cambios NO son aleatorios. Cada partida genera un **patrón oculto** compuesto de 3 a 5 reglas simples, por ejemplo:
   - "Las paredes del sector norte rotan en sentido horario cada ciclo."
   - "Un pasillo que fue recorrido dos veces se cierra al ciclo siguiente."
@@ -152,7 +152,7 @@ Lo que ocurre mientras el tiempo corre:
 1. **La ciudad produce y consume** a intervalos fijos (cada 6 segundos en el prototipo). Construir es inmediato y se puede hacer en cualquier momento.
 2. **Los corredores avanzan** una celda por segundo hacia el destino que se les dio, recalculando el camino si el laberinto cambió. Resuelven hallazgos al pasar.
 3. **Las raciones se gastan** a los mismos intervalos que la economía de la ciudad. Un corredor sin raciones fuera de la ciudad se pierde.
-4. **El laberinto gira** cada ciclo (36 segundos en el prototipo), según el patrón oculto. Los corredores que estén en filas móviles se mueven con ellas.
+4. **El laberinto gira** cada ciclo (60 segundos en el prototipo), según el patrón oculto. Los corredores que estén en filas móviles se mueven con ellas.
 5. **Las facciones** ajustan su balance con cada decisión y disparan eventos al cruzar umbrales. Los eventos pausan el juego.
 
 Una partida completa debería durar entre 20 y 40 minutos en el corte vertical. El prototipo de la fase 1 dura 6 minutos.

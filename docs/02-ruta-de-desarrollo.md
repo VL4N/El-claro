@@ -52,7 +52,7 @@ Si no, el ciclo es demasiado predecible o demasiado caótico. Ajustar N antes de
 - Dos edificios: huerto y taller.
 - Un tipo de corredor, sin nombre ni atributos. Se mueve N celdas por turno por una ruta que el jugador traza.
 - Hallazgos: escombros (materiales) y marcas (conocimiento).
-- Tiempo real con pausa: un tick por segundo, economía cada 6, giro cada 36.
+- Tiempo real con pausa: un tick por segundo, economía cada 6, giro cada 60.
 - Derrota por comida. Victoria al cruzar la salida (se incluyó porque es el ancla de la tensión).
 
 **Decisiones técnicas a tomar en esta fase:**

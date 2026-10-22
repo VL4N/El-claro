@@ -8,6 +8,14 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-22 · Sesión 10: giros cada minuto
+
+**Decidido**
+
+- **El laberinto gira cada 60 segundos** (antes 36). Pedido del autor: "suceden a cada rato". Motivo: para aprender un patrón hay que poder observar un estado, planear con él y ver el siguiente. Con 8 minutos de partida quedan 8 giros, suficientes para que el patrón se repita y se note.
+
+---
+
 ## 2026-10-22 · Sesión 9: comparar sin tapar, y la sala de mapas
 
 **Hecho**

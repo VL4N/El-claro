@@ -5,7 +5,7 @@ export const ANCHO = 15;
 export const ALTO = 15;
 // El tiempo avanza en "ticks" (un segundo de juego a velocidad normal).
 export const TICK_ECONOMIA = 6;    // cada cuántos ticks la ciudad produce y consume, y los corredores gastan una ración
-export const CICLO = 36;           // cada cuántos ticks gira el laberinto
+export const CICLO = 60;           // cada cuántos ticks gira el laberinto (un minuto)
 export const TURNOS_MAX = 480;     // duración de la partida en ticks (8 minutos)
 export const CAPACIDAD = 3;        // materiales que carga un corredor
 export const COSTO_HUERTO = 4;
