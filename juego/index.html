@@ -70,6 +70,13 @@
   .comparar canvas { width: 150px; height: 150px; flex: 0 0 150px; border: 1px solid var(--borde); border-radius: 6px; background: var(--niebla); }
   .comparar-texto { font-size: 13px; color: var(--suave); min-width: 0; }
   .comparar-texto b { display: block; color: var(--tinta); margin-bottom: 4px; }
+  .nav-giros { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .nav-giros b { margin: 0; flex: 1; }
+  .nav-giros button { padding: 2px 10px; font-size: 16px; line-height: 1.2; }
+  .pistas { margin-top: 12px; border-top: 1px solid var(--borde); padding-top: 10px; font-size: 13px; }
+  .pistas > b { display: block; margin-bottom: 4px; }
+  .pistas .nota { color: var(--suave); font-size: 12px; }
+  .pistas p { margin: 0 0 4px; font-style: italic; }
   .sala { margin-top: 12px; border-top: 1px solid var(--borde); padding-top: 10px; font-size: 13px; }
   .sala > b { display: block; margin-bottom: 2px; }
   .sala > span { color: var(--suave); }
@@ -144,9 +151,13 @@
   <div class="comparar">
     <canvas id="antes" width="180" height="180"></canvas>
     <div class="comparar-texto">
-      <b>Antes del último giro</b>
-      <span id="antesNota">Cuando el laberinto gire, aquí quedará el mapa como lo conocías justo antes, para comparar con el de arriba.</span>
+      <div class="nav-giros"><button id="giroPrev">‹</button><b id="giroTitulo">Historial de giros</b><button id="giroNext">›</button></div>
+      <span id="antesNota">Cuando el laberinto gire, aquí quedará el mapa como lo conocías justo antes de cada giro, para comparar con el de arriba.</span>
     </div>
+  </div>
+  <div class="pistas">
+    <b>Lo que dicen las marcas</b>
+    <div id="pistas"><span class="nota">Todavía no leíste ninguna marca. Cada una cuenta algo del patrón del laberinto.</span></div>
   </div>
   <div class="sala">
     <b>Sala de mapas</b>
@@ -168,7 +179,7 @@
     <p><b>Todo pasa a la vez.</b> Pulsa Jugar y el tiempo corre. Pausa cuando quieras para pensar; también con la barra espaciadora.</p>
     <p><b>Explorar.</b> El laberinto empieza a oscuras: solo se conoce lo que rodea a la ciudad. Los corredores destapan lo que ven a su paso. Toca un corredor y luego una celda, aunque sea desconocida, para darle destino.</p>
     <p><b>Raciones.</b> En la ciudad elige cuántas lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. El juego recomienda cuántas necesita para ir y volver, con margen por lo que no se ha explorado. La tarjeta de cada corredor muestra el tiempo que le queda y avisa si no le alcanza para volver.</p>
-    <p><b>El giro.</b> Cada 60 segundos algunas filas o columnas se desplazan. Cuáles y hacia dónde cambia en cada partida: hay que descubrirlo. Las celdas a la vista que cambiaron se marcan, el mapa chico de la pestaña Mapas muestra cómo lo conocías antes del giro, y en la sala de mapas puedes gastar conocimiento para confirmar qué hace una fila o columna. Lo visto antes de un giro se muestra apagado porque puede haber cambiado.</p>
+    <p><b>El giro.</b> Cada 60 segundos algunas filas o columnas se desplazan. Cuáles y hacia dónde cambia en cada partida: hay que descubrirlo. Las celdas a la vista que cambiaron se marcan, el mapa chico de la pestaña Mapas muestra cómo lo conocías antes de cada giro (con flechas para recorrer el historial), las marcas que lees cuentan algo del patrón en palabras, y en la sala de mapas puedes gastar conocimiento para confirmar qué hace una fila o columna. Lo visto antes de un giro se muestra apagado porque puede haber cambiado.</p>
     <p><b>Hallazgos.</b> Los escombros (M) dan materiales; las marcas (K), conocimiento. Con 4 materiales se construye un huerto; con 5, el taller (los corredores caminan el doble de rápido). Reclutar un corredor cuesta 3 materiales y 2 de comida, hasta 6.</p>
     <p><b>La salida.</b> Nadie sabe dónde está. Al leer 4 marcas aparece en el mapa, y entonces hay que llegar con un corredor antes de que se acabe el tiempo (8 minutos).</p>
   </div>
@@ -192,11 +203,12 @@ const N = M.ANCHO, TAM = cv.width / N;
 let s = null, seleccion = null, pendiente = null, raciones = null, inicio = 0;
 let pausado = true, velocidadJuego = 1, ultimoTick = 0, posPrevias = new Map(), fraccion = 1;
 const cvAntes = $("antes"), ctxAntes = cvAntes.getContext("2d");
+let giroVisto = null; // índice en s.historial que se muestra; null = el último
 const MS_TICK = 1000;
 
 function nueva(semilla) {
   s = M.nuevaPartida(semilla);
-  seleccion = null; pendiente = null; raciones = null; inicio = Date.now();
+  seleccion = null; pendiente = null; raciones = null; inicio = Date.now(); giroVisto = null;
   pausado = true; posPrevias = new Map(); fraccion = 1; ultimoTick = performance.now();
   $("fin").style.display = "none";
   render();
@@ -205,7 +217,9 @@ function nueva(semilla) {
 // ---------- reloj ----------
 function tick() {
   posPrevias = new Map(s.corredores.map((k) => [k.id, { x: k.x, y: k.y, estado: k.estado }]));
+  const giros = s.historial.length;
   s = M.avanzar(s);
+  if (s.historial.length !== giros) giroVisto = null;
   fraccion = 0;
   render();
 }
@@ -316,9 +330,10 @@ const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v
 function dibujarAntes() {
   const T = cvAntes.width / N;
   ctxAntes.clearRect(0, 0, cvAntes.width, cvAntes.height);
-  if (!s.conocidoAnterior) return;
+  const h = entradaHistorial();
+  if (!h) return;
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const ch = s.conocidoAnterior[y][x];
+    const ch = h.antes[y][x];
     let color = css("--niebla");
     if (ch === "#") color = css("--pared");
     else if (ch === "C") color = css("--ciudad");
@@ -330,8 +345,13 @@ function dibujarAntes() {
     ctxAntes.fillRect(x * T, y * T, T, T);
   }
   ctxAntes.strokeStyle = css("--acento"); ctxAntes.lineWidth = 2;
-  for (const p of s.cambiosGiro) ctxAntes.strokeRect(p.x * T + 1, p.y * T + 1, T - 2, T - 2);
+  for (const p of h.cambios) ctxAntes.strokeRect(p.x * T + 1, p.y * T + 1, T - 2, T - 2);
   ctxAntes.lineWidth = 1;
+}
+function entradaHistorial() {
+  if (!s.historial.length) return null;
+  const i = giroVisto === null ? s.historial.length - 1 : Math.max(0, Math.min(s.historial.length - 1, giroVisto));
+  return s.historial[i];
 }
 
 // ---------- interfaz ----------
@@ -365,12 +385,21 @@ function render() {
   const vivos = s.corredores.filter((k) => k.estado !== "perdido" && k.estado !== "salio").length;
   br.textContent = `Reclutar corredor (${M.COSTO_RECLUTA.materiales} mat + ${M.COSTO_RECLUTA.comida} comida) · ${vivos} de ${M.CORREDORES_MAX}`;
   br.disabled = !!s.fin || vivos >= M.CORREDORES_MAX || s.materiales < M.COSTO_RECLUTA.materiales || s.comida < M.COSTO_RECLUTA.comida;
-  if (s.conocidoAnterior) {
-    const filas = [...new Set(s.cambiosGiro.map((p) => p.y + 1))].sort((a, b) => a - b);
-    $("antesNota").textContent = s.cambiosGiro.length
-      ? `En el último giro cambiaron ${s.cambiosGiro.length} celdas a la vista, en ${filas.length === 1 ? "la fila" : "las filas"} ${filas.join(", ")}. Están marcadas en los dos mapas.`
-      : "En el último giro no cambió nada de lo que estaba a la vista. Las filas que se mueven están en otra parte.";
+  const h = entradaHistorial();
+  const idx = h ? s.historial.indexOf(h) : -1;
+  $("giroTitulo").textContent = h ? `Giro ${h.giro} de ${s.historial.length}` : "Historial de giros";
+  $("giroPrev").disabled = !h || idx <= 0;
+  $("giroNext").disabled = !h || idx >= s.historial.length - 1;
+  if (h) {
+    const filas = [...new Set(h.cambios.map((p) => p.y + 1))].sort((a, b) => a - b);
+    const cols = [...new Set(h.cambios.map((p) => "ABCDEFGHIJKLMNO"[p.x]))].sort();
+    $("antesNota").textContent = h.cambios.length
+      ? `Antes del giro ${h.giro}. Cambiaron ${h.cambios.length} celdas a la vista: ${filas.length === 1 ? "fila" : "filas"} ${filas.join(", ")}; ${cols.length === 1 ? "columna" : "columnas"} ${cols.join(", ")}. Marcadas en naranja${idx === s.historial.length - 1 ? " en los dos mapas" : ""}.`
+      : `Antes del giro ${h.giro}. No cambió nada de lo que estaba a la vista: lo que se mueve estaba en otra parte.`;
   }
+  $("pistas").innerHTML = s.pistasLeidas.length
+    ? s.pistasLeidas.map((t) => `<p>«${t}»</p>`).join("")
+    : `<span class="nota">Todavía no leíste ninguna marca. Cada una cuenta algo del patrón del laberinto.</span>`;
   const sel = $("selLinea");
   if (!sel.options.length) {
     for (let y = 0; y < N; y++) { const o = document.createElement("option"); o.value = "fila:" + y; o.textContent = `Fila ${y + 1}`; sel.appendChild(o); }
@@ -459,6 +488,8 @@ $("btnHuerto").onclick = () => { s = M.construir(s, "huerto"); render(); };
 $("btnReclutar").onclick = () => { s = M.reclutar(s); render(); };
 $("btnConsultar").onclick = () => { const [t, i] = $("selLinea").value.split(":"); s = M.consultarLinea(s, t, +i); render(); };
 $("selLinea").onchange = () => render();
+$("giroPrev").onclick = () => { const i = s.historial.indexOf(entradaHistorial()); giroVisto = Math.max(0, i - 1); render(); };
+$("giroNext").onclick = () => { const i = s.historial.indexOf(entradaHistorial()); giroVisto = i + 1 >= s.historial.length - 1 ? null : i + 1; render(); };
 for (const b of document.querySelectorAll("#pestanas button")) b.onclick = () => {
   for (const o of document.querySelectorAll("#pestanas button")) o.classList.toggle("activo", o === b);
   for (const p of document.querySelectorAll(".panel")) p.hidden = p.id !== "tab-" + b.dataset.tab;

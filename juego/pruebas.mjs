@@ -142,6 +142,23 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   ok(s2.lineasConocidas.f1.modo === "alterna" && s2.lineasConocidas.f1.glifo === "⇄", "describe una fila que alterna");
 }
 
+// 4f. pistas e historial
+{
+  let s = M.nuevaPartida(3, M.BIBLIOTECA[6]); // marea
+  ok(s.pistas.length === 1 + M.BIBLIOTECA[6].lineas.length && s.pistas[0] === M.BIBLIOTECA[6].pista, "las pistas empiezan por la idea general");
+  ok(s.pistas.slice(1).every((t) => /se mueve/.test(t)), "las demás pistas nombran una línea que se mueve");
+  ok(s.pistas.slice(1).some((t) => /no siempre hacia el mismo lado/.test(t)), "la marea avisa que alterna");
+  s = M.revelarTodo(s);
+  let k = null;
+  for (let y = 0; y < 15 && !k; y++) for (let x = 0; x < 15 && !k; x++) if (s.mapa[y][x] === "K" && M.camino(s.mapa, { x: 7, y: 7 }, { x, y })) k = { x, y };
+  s = M.enviar(s, 0, k, 10);
+  for (let i = 0; i < 40 && s.pistasLeidas.length === 0; i++) { s = M.revelarTodo(s); s = M.cambiarDestino(s, 0, k); s = M.avanzar(s); }
+  ok(s.pistasLeidas.length === 1 && s.pistasLeidas[0] === s.pistas[0], "leer una marca revela la primera pista");
+  for (let i = 0; i < M.CICLO * 2; i++) s = M.avanzar(s);
+  ok(s.historial.length === 2 && s.historial[0].giro === 1 && s.historial[1].giro === 2, "el historial guarda un registro por giro");
+  ok(Array.isArray(s.historial[0].cambios) && s.historial[0].antes.length === 15, "cada registro tiene el mapa de antes y los cambios");
+}
+
 // 5. atajo atraviesa una pared
 {
   const mapa = ["#####", "#C#.#", "#####", "#####", "#####"];

@@ -84,6 +84,19 @@ export function elegirPatron(rng) {
   return BIBLIOTECA[Math.floor(rng() * BIBLIOTECA.length)];
 }
 
+// Lo que dicen las marcas, en orden de lectura: primero la idea general del patrón,
+// después una línea por marca, sin decir hacia dónde (eso lo confirma la sala de mapas).
+export function pistasDePatron(patron, rng) {
+  const lineas = patron.lineas.slice();
+  for (let i = lineas.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [lineas[i], lineas[j]] = [lineas[j], lineas[i]]; }
+  const deLinea = (l) => {
+    const nombre = nombreLinea(l.tipo, l.indice);
+    const ritmo = l.modo === "alterna" ? ", y no siempre hacia el mismo lado" : l.modo === "cada2" ? ", pero no en todos los giros" : "";
+    return `la ${nombre} se mueve${ritmo}`;
+  };
+  return [patron.pista, ...lineas.map(deLinea)];
+}
+
 // Desplazamiento real de una línea en el giro número `giro` (el primero es 1). 0 si no se mueve.
 export function pasoLinea(linea, giro) {
   if (linea.modo === "alterna") return giro % 2 === 1 ? linea.dir : -linea.dir;
@@ -278,6 +291,8 @@ export function nuevaPartida(semilla = Date.now() % 1000000, patronFijo = null) 
   }));
   const s = {
     semilla, turno: 1, mapa: gen.mapa, patron: gen.patron, conocido, vistoEn, giro: 0,
+    pistas: pistasDePatron(gen.patron, crearRng(semilla + 7)), pistasLeidas: [],
+    historial: [],        // un registro por giro: { giro, antes, despues, cambios }
     comida: 14, materiales: 0, conocimiento: 0, hambre: 0, marcas: 0,
     huertos: 0, taller: false,
     corredores, salidaAlcanzada: false, salidaConocida: false,
@@ -447,7 +462,7 @@ function moverCorredor(s, c) {
   let { x, y, carga, atajo } = c;
   let comida = s.comida, materiales = s.materiales, conocimiento = s.conocimiento, marcas = s.marcas;
   let registro = s.registro.slice();
-  let salidaAlcanzada = s.salidaAlcanzada, salidaConocida = s.salidaConocida;
+  let salidaAlcanzada = s.salidaAlcanzada, salidaConocida = s.salidaConocida, pistasLeidas = s.pistasLeidas;
   let estado = c.estado, destino = c.destino, raciones = c.raciones;
   for (let i = 0; i < pasos; i++) {
     const p = ruta[i];
@@ -467,6 +482,8 @@ function moverCorredor(s, c) {
     } else if (ch === "K") {
       conocimiento += 1; marcas += 1;
       mapa = ponerCelda(mapa, x, y, ".");
+      const pista = s.pistas[pistasLeidas.length];
+      if (pista) { pistasLeidas = [...pistasLeidas, pista]; registro.push(`La marca de ${coord(p)} dice: «${pista}».`); }
       const faltan = MARCAS_PARA_SALIR - marcas;
       if (faltan > 0) registro.push(`${c.nombre} lee una marca en ${coord(p)}: +1 conocimiento. Faltan ${faltan} para saber dónde está la salida.`);
       else if (!salidaConocida) {
@@ -495,7 +512,7 @@ function moverCorredor(s, c) {
     materiales += carga; carga = 0; estado = "ciudad"; raciones = 0; atajo = false;
   }
   if (estado === "ciudad") { ({ x, y } = casa(c.id)); }
-  let sOut = { ...s, mapa, comida, materiales, conocimiento, marcas, registro, salidaAlcanzada, salidaConocida };
+  let sOut = { ...s, mapa, comida, materiales, conocimiento, marcas, registro, salidaAlcanzada, salidaConocida, pistasLeidas };
   if (salidaConocida && !s.salidaConocida) {
     // la salida aparece en el mapa conocido
     const conocido = sOut.conocido.map((f) => f.split(""));
@@ -561,7 +578,8 @@ export function avanzar(s) {
       const x = k % ANCHO, y = Math.floor(k / ANCHO);
       if (anterior[y][x] !== "?" && anterior[y][x] !== s.conocido[y][x]) cambios.push({ x, y });
     }
-    s = { ...s, cambiosGiro: cambios, cambiosEn: s.turno };
+    s = { ...s, cambiosGiro: cambios, cambiosEn: s.turno,
+      historial: [...s.historial, { giro: giroNum, antes: anterior, despues: s.conocido, cambios }] };
     if (cambios.length) {
       const filas = [...new Set(cambios.map((p) => p.y + 1))].sort((a, b) => a - b);
       s = log(s, `A la vista cambiaron ${cambios.length} celdas, en ${filas.length === 1 ? "la fila" : "las filas"} ${filas.join(", ")}. Compara con el mapa de antes del giro.`);

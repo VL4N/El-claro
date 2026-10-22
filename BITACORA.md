@@ -8,6 +8,27 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-22 · Sesión 12: historial de giros y marcas que hablan
+
+**Hecho**
+
+- Historial completo de giros en la pestaña Mapas: un registro por giro con el mapa conocido de antes y las celdas que cambiaron a la vista. Flechas para recorrerlo. Al producirse un giro nuevo, vuelve al último.
+- Las marcas dicen algo al leerse. La primera, la idea general del patrón ("aquí lo que se mueve son columnas, no filas"). Las siguientes, una línea que se mueve, sin decir hacia dónde, y con una señal si el ritmo es raro ("no siempre hacia el mismo lado", "no en todos los giros"). Lo leído se acumula en "Lo que dicen las marcas".
+- Pruebas: orden y contenido de las pistas, lectura al pisar una marca, y un registro de historial por giro.
+
+**Decidido**
+
+- **Las marcas dan pistas parciales, no respuestas.** Nombran la línea pero no la dirección; la sala de mapas la confirma gastando conocimiento. Motivo: una marca que diera la respuesta completa dejaría sin sentido a la sala de mapas y al historial. Así cada herramienta aporta una parte: la marca dice dónde mirar, el historial muestra qué pasó, la sala confirma.
+- **El orden de las pistas es por semilla, con la idea general siempre primero.** Motivo: la primera marca tiene que orientar; después da igual el orden.
+- **El historial guarda solo lo que el jugador conocía**, no el mapa real. Motivo: igual que la niebla; la memoria del jugador es el material del misterio.
+
+**Siguiente**
+
+- Que el autor juegue con todo esto y responda la puerta de la fase 2: ¿descubre al menos una regla por su cuenta?
+- Dificultad del patrón según la partida y pruebas con personas nuevas.
+
+---
+
 ## 2026-10-22 · Sesión 11: biblioteca de reglas y pestañas
 
 **Hecho**

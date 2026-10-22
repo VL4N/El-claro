@@ -38,9 +38,16 @@ Las filas y columnas están en la numeración que ve el jugador (filas 1 a 15, c
 2. **Confirmar.** En la sala de mapas se elige una fila o columna y se gasta 1 conocimiento. El juego responde qué hace esa línea y lo marca en el borde del tablero para toda la partida.
 3. **Elegir qué preguntar.** El conocimiento viene de las marcas, seis por mapa, y también sirve para los atajos. No alcanza para preguntar todo: conviene preguntar por las líneas que cruzan las rutas que importan.
 
+## Las marcas hablan
+
+Cada marca leída revela una pista en palabras, en este orden:
+
+1. La idea general del patrón, por ejemplo "aquí lo que se mueve son columnas, no filas".
+2. En adelante, una línea que se mueve, sin decir hacia dónde: "la fila 4 se mueve". Si el ritmo es raro, lo avisa: "y no siempre hacia el mismo lado", "pero no en todos los giros".
+
+Las pistas no reemplazan a la sala de mapas: dicen dónde mirar, y la sala confirma hacia dónde.
+
 ## Pendiente para esta fase
 
-- Historial de varios giros, no solo el último.
 - Elegir la dificultad del patrón según la partida (hoy se elige al azar entre los doce).
-- Marcas de generaciones anteriores que den una pista en palabras ("aquí lo que se mueve son columnas").
 - Que la sala de mapas permita preguntar por hipótesis ("¿las filas pares van a la derecha?") y no solo por líneas.
