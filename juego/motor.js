@@ -13,6 +13,7 @@ export const COSTO_TALLER = 5;
 export const COSTO_ATAJO = 2;      // conocimiento para atravesar una pared
 export const PUNTOS_SALIDA = 10;
 export const RACIONES_MAX = 10;
+export const MARCAS_PARA_SALIR = 4;   // marcas leídas que hacen falta para que la salida se abra
 
 const NOMBRES = ["Ira", "Teo", "Noa"];
 const FILAS_DERECHA = [1, 3, 5];     // filas (base 0) que giran a la derecha: mitad norte
@@ -204,10 +205,10 @@ export function nuevaPartida(semilla = Date.now() % 1000000) {
   }));
   return {
     semilla, turno: 1, mapa: gen.mapa,
-    comida: 14, materiales: 0, conocimiento: 0, hambre: 0,
+    comida: 14, materiales: 0, conocimiento: 0, hambre: 0, marcas: 0,
     huertos: 0, taller: false,
     corredores, salidaAlcanzada: false,
-    registro: [`El Claro despierta. Tres corredores esperan en la plaza.`],
+    registro: [`El Claro despierta. La salida está sellada: hay que leer ${MARCAS_PARA_SALIR} marcas para abrirla.`],
     fin: null,
   };
 }
@@ -229,7 +230,7 @@ export function construir(s, que) {
   if (que === "taller") {
     if (s.taller || s.materiales < COSTO_TALLER) return s;
     return log({ ...s, materiales: s.materiales - COSTO_TALLER, taller: true },
-      `Se construye el taller. Los corredores ahora se mueven 3 celdas por turno.`);
+      `Se construye el taller. Los corredores ahora caminan el doble de rápido: 2 celdas por segundo. Los viajes duran la mitad y necesitan menos raciones.`);
   }
   return s;
 }
@@ -290,7 +291,7 @@ function moverCorredor(s, c) {
   }
   let pasos = Math.min(velocidad(s), ruta.length);
   let { x, y, carga, atajo } = c;
-  let comida = s.comida, materiales = s.materiales, conocimiento = s.conocimiento;
+  let comida = s.comida, materiales = s.materiales, conocimiento = s.conocimiento, marcas = s.marcas;
   let registro = s.registro.slice();
   let salidaAlcanzada = s.salidaAlcanzada;
   let estado = c.estado, destino = c.destino, raciones = c.raciones;
@@ -307,10 +308,16 @@ function moverCorredor(s, c) {
       mapa = ponerCelda(mapa, x, y, ".");
       registro.push(`${c.nombre} encuentra escombros en ${coord(p)}: ${toma} ${toma === 1 ? "material" : "materiales"}.${toma < n ? " No puede cargar más." : ""}`);
     } else if (ch === "K") {
-      conocimiento += 1;
+      conocimiento += 1; marcas += 1;
       mapa = ponerCelda(mapa, x, y, ".");
-      registro.push(`${c.nombre} lee una marca en ${coord(p)}: +1 conocimiento.`);
+      const faltan = MARCAS_PARA_SALIR - marcas;
+      registro.push(`${c.nombre} lee una marca en ${coord(p)}: +1 conocimiento.${faltan > 0 ? ` Faltan ${faltan} para abrir la salida.` : marcas === MARCAS_PARA_SALIR ? " La salida se abre." : ""}`);
     } else if (ch === "S") {
+      if (marcas < MARCAS_PARA_SALIR) {
+        registro.push(`${c.nombre} llega a la salida, pero está sellada. Faltan ${MARCAS_PARA_SALIR - marcas} marcas por leer.`);
+        x = p.x; y = p.y; destino = null;
+        break;
+      }
       salidaAlcanzada = true;
       registro.push(`${c.nombre} cruza la salida en ${coord(p)}.`);
       estado = "salio"; destino = null;
@@ -331,7 +338,7 @@ function moverCorredor(s, c) {
   }
   if (estado === "ciudad") { x = 6 + c.id; y = 7; }
   return {
-    s: { ...s, mapa, comida, materiales, conocimiento, registro, salidaAlcanzada },
+    s: { ...s, mapa, comida, materiales, conocimiento, marcas, registro, salidaAlcanzada },
     c: { ...c, x, y, carga, atajo, estado, destino, raciones },
   };
 }

@@ -8,6 +8,27 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-22 · Sesión 6: seis partidas del autor y la salida sellada
+
+**Hecho**
+
+- El autor jugó seis partidas y pegó el registro (guardado en `fase-1/partidas/2026-10-22-autor.json`). Resultado: una derrota por comida con la economía vieja y cinco victorias, cuatro de ellas antes del tick 90, es decir, en el primer giro.
+- Lectura: la estrategia dominante era esperar el primer giro y mandar un corredor directo a la salida. Materiales, huerto y taller casi no importaban. El juego era fácil y corto.
+- También preguntó para qué sirve el taller, porque no notaba el cambio. El mensaje del registro decía "3 celdas por turno", una frase vieja de la versión por turnos.
+
+**Decidido**
+
+- **La salida está sellada hasta leer 4 marcas.** Un corredor que llega a la S sin las marcas se queda ahí y el registro lo explica. Un aviso sobre el tablero muestra "Salida sellada: 2 de 4 marcas" y la S se pinta gris hasta que se abre. Motivo: obliga a explorar antes de salir, hace que los viajes cuesten raciones y que el huerto y el taller tengan sentido. Es la versión simple de la regla de la fase 2 (salir exige conocer el patrón), adelantada porque el juego la necesita ya.
+- **El taller se explica donde se usa.** El botón dice "velocidad ×2", el registro dice que los viajes duran la mitad y la estimación de raciones ya lo refleja. El movimiento de dos celdas por segundo ahora se interpola y se ve fluido.
+- **La comida muestra su ritmo** ("+1 cada 6 s") al lado del número, para que se entienda que esperar también produce.
+- **Los registros de partida van al repositorio**, en `fase-1/partidas/`, una tanda por archivo, con una lectura corta en el README de la carpeta. Motivo: son la evidencia de cada ajuste de balance.
+
+**Siguiente**
+
+- Que el autor juegue de nuevo con la salida sellada. Preguntas: ¿cuántas partidas gana?, ¿cuánto duran?, ¿el huerto y el taller ahora pesan?
+
+---
+
 ## 2026-10-22 · Sesión 5: primer ajuste con partidas reales
 
 **Hecho**

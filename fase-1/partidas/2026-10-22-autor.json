@@ -1,0 +1,8 @@
+[
+  {"fecha": "2026-10-22T15:28:39.648Z", "semilla": 798286, "resultado": "derrota", "motivo": "La ciudad pasó demasiado tiempo sin comida.", "ticks": 24, "segundos": 121, "puntos": 2, "huertos": 0, "taller": false, "perdidos": 1},
+  {"fecha": "2026-10-22T15:45:48.315Z", "semilla": 726349, "resultado": "victoria", "motivo": "Un corredor encontró la salida.", "ticks": 47, "segundos": 222, "puntos": 14, "huertos": 2, "taller": false, "perdidos": 0},
+  {"fecha": "2026-10-22T15:51:47.226Z", "semilla": 954628, "resultado": "victoria", "motivo": "Un corredor encontró la salida.", "ticks": 88, "segundos": 353, "puntos": 14, "huertos": 1, "taller": false, "perdidos": 1},
+  {"fecha": "2026-10-22T16:00:22.208Z", "semilla": 309582, "resultado": "victoria", "motivo": "Un corredor encontró la salida.", "ticks": 260, "segundos": 513, "puntos": 18, "huertos": 1, "taller": true, "perdidos": 0},
+  {"fecha": "2026-10-22T16:02:30.313Z", "semilla": 829980, "resultado": "victoria", "motivo": "Un corredor encontró la salida.", "ticks": 48, "segundos": 120, "puntos": 19, "huertos": 1, "taller": false, "perdidos": 0},
+  {"fecha": "2026-10-22T16:06:32.456Z", "semilla": 951818, "resultado": "victoria", "motivo": "Un corredor encontró la salida.", "ticks": 52, "segundos": 241, "puntos": 14, "huertos": 1, "taller": false, "perdidos": 0}
+]

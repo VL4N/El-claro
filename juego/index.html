@@ -47,8 +47,10 @@
   .recurso { background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 6px 8px; }
   .recurso b { display: block; font-size: 20px; }
   .recurso span { font-size: 12px; color: var(--suave); }
-  .recurso button { margin-top: 4px; width: 100%; font-size: 12px; padding: 4px; }
+  .recurso button { margin-top: 4px; width: 100%; font-size: 11px; padding: 4px 2px; white-space: normal; line-height: 1.2; }
   canvas { display: block; width: 100%; touch-action: manipulation; border: 1px solid var(--borde); border-radius: 6px; background: var(--corredor); }
+  .salida-estado { font-size: 13px; margin: 0 0 8px; padding: 6px 10px; border-radius: 8px; background: var(--tarjeta); border: 1px solid var(--borde); }
+  .salida-estado.abierta { border-color: var(--salida); color: var(--salida); font-weight: bold; }
   .pista { font-size: 13px; color: var(--suave); margin: 6px 0 10px; min-height: 18px; }
   .corredores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .tarjeta { background: var(--tarjeta); border: 2px solid var(--borde); border-radius: 8px; padding: 6px 8px; font-size: 13px; cursor: pointer; }
@@ -90,11 +92,12 @@
 </header>
 
 <div class="recursos">
-  <div class="recurso"><b id="comida">0</b><span>comida</span></div>
+  <div class="recurso"><b id="comida">0</b><span id="comidaNota">comida</span></div>
   <div class="recurso"><b id="materiales">0</b><span>materiales</span><button id="btnHuerto"></button></div>
   <div class="recurso"><b id="conocimiento">0</b><span>conocimiento</span><button id="btnTaller"></button></div>
 </div>
 
+<div class="salida-estado" id="salidaEstado"></div>
 <canvas id="tablero" width="600" height="600"></canvas>
 <div class="pista" id="pista"></div>
 
@@ -105,7 +108,7 @@
 <div class="registro" id="registro"></div>
 
 <div class="leyenda">
-  <b>Cómo se juega.</b> Todo pasa a la vez: pulsa Jugar y el tiempo corre. Puedes pausar cuando quieras para pensar. Toca un corredor y luego una celda para darle destino. En la ciudad elige cuántas raciones lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. El juego te recomienda cuántas necesita para ir y volver; la tarjeta de cada corredor muestra cuánto tiempo le queda y avisa si no le alcanza para volver. La ciudad produce 3 de comida y consume 2 cada 6 segundos; un huerto suma 2 más. Las filas sombreadas giran cada 36 segundos: las del norte a la derecha, las del sur a la izquierda. Los escombros (M) dan materiales, las marcas (K) conocimiento. Con 4 materiales se construye un huerto; con 5, el taller. Gana quien cruza la salida (S) antes de que se acabe el tiempo (6 minutos).
+  <b>Cómo se juega.</b> Todo pasa a la vez: pulsa Jugar y el tiempo corre. Puedes pausar cuando quieras para pensar. Toca un corredor y luego una celda para darle destino. En la ciudad elige cuántas raciones lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. El juego te recomienda cuántas necesita para ir y volver; la tarjeta de cada corredor muestra cuánto tiempo le queda y avisa si no le alcanza para volver. La ciudad produce 3 de comida y consume 2 cada 6 segundos; un huerto suma 2 más. Las filas sombreadas giran cada 36 segundos: las del norte a la derecha, las del sur a la izquierda. Los escombros (M) dan materiales, las marcas (K) conocimiento. Con 4 materiales se construye un huerto (más comida); con 5, el taller (los corredores caminan el doble de rápido, así que los viajes necesitan la mitad de raciones). La salida (S) está sellada: hay que leer 4 marcas para abrirla, y recién entonces cruzarla con un corredor antes de que se acabe el tiempo (6 minutos).
 </div>
 <div class="pie">Prototipo de la fase 1, tiempo real. Semilla <span id="semilla"></span>. <a href="#" id="btnNueva">Nueva partida</a> · <a href="#" id="btnCopiar">Copiar registro de partidas</a></div>
 
@@ -156,7 +159,8 @@ requestAnimationFrame(bucle);
 
 function posDibujo(k) {
   const p = posPrevias.get(k.id);
-  if (!p || p.estado !== k.estado || Math.abs(p.x - k.x) > 1 || Math.abs(p.y - k.y) > 1) return { x: k.x, y: k.y };
+  const salto = M.velocidad(s);
+  if (!p || p.estado !== k.estado || Math.abs(p.x - k.x) > salto || Math.abs(p.y - k.y) > salto) return { x: k.x, y: k.y };
   return { x: p.x + (k.x - p.x) * fraccion, y: p.y + (k.y - p.y) * fraccion };
 }
 function mmss(ticks) { const t = Math.max(0, ticks); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, "0")}`; }
@@ -172,7 +176,7 @@ function dibujar() {
     let color = M.FILAS_MOVILES.has(y) ? css("--movil") : css("--corredor");
     if (ch === "#") color = css("--pared");
     else if (ch === "C") color = css("--ciudad");
-    else if (ch === "S") color = css("--salida");
+    else if (ch === "S") color = s.marcas >= M.MARCAS_PARA_SALIR ? css("--salida") : css("--suave");
     else if (ch === "M") color = css("--escombros");
     else if (ch === "K") color = css("--marca");
     ctx.fillStyle = color;
@@ -231,6 +235,11 @@ function render() {
   $("btnPausa").disabled = !!s.fin;
   $("btnVel").textContent = `×${velocidadJuego}`;
   $("comida").textContent = s.comida;
+  const se = $("salidaEstado");
+  const abierta = s.marcas >= M.MARCAS_PARA_SALIR;
+  se.textContent = abierta ? "Salida abierta. Lleva un corredor hasta la S." : `Salida sellada: ${s.marcas} de ${M.MARCAS_PARA_SALIR} marcas leídas. Busca las K.`;
+  se.className = "salida-estado" + (abierta ? " abierta" : "");
+  $("comidaNota").textContent = `comida · +${M.produccion(s) - M.CONSUMO} cada ${M.TICK_ECONOMIA} s`;
   $("materiales").textContent = s.materiales;
   $("conocimiento").textContent = s.conocimiento;
   $("semilla").textContent = s.semilla;
@@ -238,7 +247,9 @@ function render() {
   bh.textContent = `Huerto (${M.COSTO_HUERTO})${s.huertos ? " ×" + s.huertos : ""}`;
   bh.disabled = !!s.fin || s.materiales < M.COSTO_HUERTO;
   const bt = $("btnTaller");
-  bt.textContent = s.taller ? "Taller listo" : `Taller (${M.COSTO_TALLER})`;
+  bt.textContent = s.taller ? "Taller: velocidad ×2" : `Taller (${M.COSTO_TALLER}): velocidad ×2`;
+  bt.title = "Con taller, los corredores caminan 2 celdas por segundo en vez de 1.";
+  bh.title = "Cada huerto suma 2 de comida por periodo.";
   bt.disabled = !!s.fin || s.taller || s.materiales < M.COSTO_TALLER;
 
   $("corredores").innerHTML = s.corredores.map((k) => {

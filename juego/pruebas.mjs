@@ -128,11 +128,26 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   console.log("partidas al azar:", JSON.stringify(resultados));
 }
 
-// 7. la salida se puede alcanzar con un plan razonable
+// 6b. la salida sellada no da la victoria
+{
+  let s = M.nuevaPartida(2);
+  let sal = null;
+  for (let y = 0; y < 15; y++) for (let x = 0; x < 15; x++) if (s.mapa[y][x] === "S") sal = { x, y };
+  // forzamos un corredor al lado de la salida y lo mandamos
+  const vecino = [[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy]) => ({ x: sal.x + dx, y: sal.y + dy })).find((p) => M.pasable(s.mapa, p.x, p.y));
+  s = { ...s, corredores: s.corredores.map((c) => c.id === 0 ? { ...c, ...vecino, estado: "fuera", raciones: 5, destino: sal } : c) };
+  s = M.avanzar(s);
+  ok(!s.salidaAlcanzada && s.corredores[0].estado === "fuera", "sin marcas la salida está sellada");
+  s = { ...s, marcas: M.MARCAS_PARA_SALIR, corredores: s.corredores.map((c) => c.id === 0 ? { ...c, ...vecino, destino: sal } : c) };
+  s = M.avanzar(s);
+  ok(s.salidaAlcanzada && s.fin && s.fin.tipo === "victoria", "con las marcas leídas se cruza la salida");
+}
+
+// 7. la salida se puede alcanzar con un plan razonable (con las marcas ya leídas)
 {
   let victorias = 0;
   for (let semilla = 1; semilla <= 20; semilla++) {
-    let s = M.nuevaPartida(semilla);
+    let s = { ...M.nuevaPartida(semilla), marcas: M.MARCAS_PARA_SALIR };
     while (!s.fin) {
       // buscar la salida en el mapa actual
       let sal = null;
