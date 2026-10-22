@@ -1258,12 +1258,14 @@ function dibujar() {
   }
   // corredores
   for (const k of s.corredores) {
-    if (k.estado === "caido" && visibles.has(k.y * N + k.x)) {
+    if (k.estado === "caido" && s.conocido[k.y][k.x] !== "?") {
       const cx = k.x * TAM + TAM / 2, cy = k.y * TAM + TAM / 2;
+      ctx.globalAlpha = visibles.has(k.y * N + k.x) ? 1 : .6;
       ctx.beginPath(); ctx.arc(cx, cy, TAM * .32, 0, Math.PI * 2);
       ctx.strokeStyle = css("--acento"); ctx.lineWidth = 3; ctx.stroke(); ctx.lineWidth = 1;
       ctx.fillStyle = css("--acento"); ctx.font = `bold ${TAM * .4}px Georgia`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(k.nombre[0], cx, cy + 1);
+      ctx.globalAlpha = 1;
       continue;
     }
     if (k.estado !== "ciudad" && k.estado !== "fuera") continue;
