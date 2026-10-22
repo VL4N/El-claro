@@ -8,7 +8,7 @@
 | Fase | Nombre | Objetivo | Duración estimada | Puerta de decisión |
 |---|---|---|---|---|
 | 0 | Prototipo de papel | Validar el dilema central sin código | 1 semana | ¿Decidir "mando ahora o espero" genera tensión? |
-| 1 | Prototipo mínimo | Bucle base jugable en tiempo real con cuadrados y texto | cerrada: no pasó. Causa: información completa | ¿Es divertido 20 minutos seguidos? |
+| 1 | Prototipo mínimo | Bucle base jugable en tiempo real con cuadrados y texto | cerrada: pasó, con la niebla de la fase 2 | ¿Es divertido 20 minutos seguidos? |
 | 2 | El laberinto se aprende | Niebla, regla oculta, salida por pistas, patrón y sala de mapas | en curso | ¿Un jugador nuevo descubre al menos una regla solo? |
 | 3 | Cada persona cuenta | Corredores con identidad y facciones | 3 a 4 semanas | ¿Perder un corredor cambia cómo juega la gente? |
 | 4 | El laberinto responde | Reacción al comportamiento | 2 semanas | ¿El jugador nota que el laberinto "lo castiga o premia"? |

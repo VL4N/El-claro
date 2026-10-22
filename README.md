@@ -6,7 +6,7 @@ Juego de estrategia por turnos. Administras una pequeña ciudad encerrada en el 
 
 ## Estado
 
-Fase 1: prototipo mínimo jugable en el navegador, en `juego/`. La fase 0 (papel) quedó como opcional: el prototipo digital la reemplaza y la pregunta de la puerta se responde jugándolo.
+Fase 2, "el laberinto se aprende": prototipo jugable en el navegador, en `juego/`, en tiempo real con pausa, niebla de guerra, regla del giro oculta y salida revelada por las marcas. La fase 1 pasó su puerta; la fase 0 (papel) quedó como opcional.
 
 **Jugar:** cuando GitHub Pages esté activado, el juego vive en `https://vl4n.github.io/El-claro/`. Mientras tanto, se puede abrir `juego/index.html` sirviendo la carpeta con cualquier servidor estático.
 

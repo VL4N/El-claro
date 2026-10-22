@@ -8,6 +8,30 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-22 · Sesión 8: la puerta de la fase 1 pasa con niebla; los giros se sienten aleatorios
+
+**Hecho**
+
+- El autor jugó tres partidas con niebla: tiempo agotado, victoria al final y derrota rápida. Por primera vez los resultados varían.
+- Respondió la puerta: **ahora sí jugaría 20 minutos**, porque "tengo que ir aprendiendo poco a poco cuánto gasto o no". Los giros, en cambio, **se sintieron aleatorios**.
+- Aplicado lo que pidió: partida de 8 minutos y reclutar corredores. Además, margen de raciones por zona sin explorar, y dos herramientas para que los giros se puedan aprender: las celdas a la vista que cambiaron se marcan unos segundos y el registro dice en qué filas, y un botón "Antes del giro" muestra el mapa como se conocía antes del último giro.
+
+**Decidido**
+
+- **La puerta de la fase 1 se da por superada con la niebla.** El bucle base es divertido cuando hay algo que descubrir. Se deja constancia en la issue #2, que queda cerrada.
+- **Partida de 8 minutos** (480 ticks). Motivo: explorar a oscuras necesita tiempo; con 6 minutos una partida se agotó sin encontrar la salida.
+- **Reclutar corredores: 3 materiales y 2 comida, hasta 6 vivos.** Motivo: perder a los tres terminaba la partida de golpe. El costo en materiales compite con el huerto y el taller, así que sigue doliendo.
+- **Margen de raciones por niebla: una ración más por cada 4 celdas sin explorar en la ida.** Motivo: la ruta supone transitable lo desconocido; sin margen, las paredes escondidas mataban corredores sin aviso.
+- **Primer paso del "historial de giros" de la fase 2:** comparar antes y después del último giro, solo con lo que estaba a la vista. Motivo: aprender una regla exige ver qué cambió. Se marcan las celdas y se nombran las filas, pero no la dirección: eso lo deduce el jugador.
+- **Los corredores ocupan la plaza de tres en tres.** Motivo: con reclutas, la fila única no alcanzaba.
+
+**Siguiente**
+
+- Que el autor juegue y diga si con "Antes del giro" logra descubrir el patrón. Si no, el siguiente paso es un historial de varios giros y la sala de mapas para confirmar hipótesis.
+- Biblioteca de reglas de patrón, para que cada partida tenga una regla distinta.
+
+---
+
 ## 2026-10-22 · Sesión 7: la fase 1 no pasa su puerta, y se sabe por qué
 
 **Hecho**

@@ -59,6 +59,9 @@
   .tarjeta.perdido, .tarjeta.salio { opacity: .55; }
   .tarjeta .aviso { display: block; color: var(--acento); font-size: 12px; margin-top: 2px; }
   .tarjeta .tiempo-restante { display: block; color: var(--suave); font-size: 12px; margin-top: 2px; }
+  .fila-extra { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .fila-extra button { font-size: 13px; }
+  .fila-extra button.activo { background: var(--acento); color: #fff; border-color: var(--acento); }
   .acciones { margin-top: 10px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 8px; padding: 10px; min-height: 48px; }
   .acciones .fila { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   button { font-family: inherit; font-size: 14px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--tinta); background: var(--tarjeta); color: var(--tinta); cursor: pointer; }
@@ -102,13 +105,17 @@
 <div class="pista" id="pista"></div>
 
 <div class="corredores" id="corredores"></div>
+<div class="fila-extra">
+  <button id="btnReclutar"></button>
+  <button id="btnAntes">Antes del giro</button>
+</div>
 <div class="acciones" id="acciones"></div>
 
 
 <div class="registro" id="registro"></div>
 
 <div class="leyenda">
-  <b>Cómo se juega.</b> Todo pasa a la vez: pulsa Jugar y el tiempo corre. Puedes pausar cuando quieras para pensar. El laberinto empieza a oscuras: solo se conoce lo que rodea a la ciudad, y los corredores van destapando lo que ven a su paso. Toca un corredor y luego una celda, aunque sea desconocida, para darle destino. En la ciudad elige cuántas raciones lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. El juego te recomienda cuántas necesita para ir y volver; la tarjeta de cada corredor muestra cuánto tiempo le queda y avisa si no le alcanza para volver. La ciudad produce 3 de comida y consume 2 cada 6 segundos; un huerto suma 2 más. Cada 36 segundos el laberinto gira: algunas filas se desplazan. Cuáles y hacia dónde es algo que tienes que descubrir observando; lo que viste antes de un giro se muestra apagado porque puede haber cambiado. Los escombros (M) dan materiales, las marcas (K) conocimiento. Con 4 materiales se construye un huerto; con 5, el taller (los corredores caminan el doble de rápido). Nadie sabe dónde está la salida: al leer 4 marcas aparece en el mapa, y entonces hay que llegar con un corredor antes de que se acabe el tiempo (6 minutos).
+  <b>Cómo se juega.</b> Todo pasa a la vez: pulsa Jugar y el tiempo corre. Puedes pausar cuando quieras para pensar. El laberinto empieza a oscuras: solo se conoce lo que rodea a la ciudad, y los corredores van destapando lo que ven a su paso. Toca un corredor y luego una celda, aunque sea desconocida, para darle destino. En la ciudad elige cuántas raciones lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. El juego te recomienda cuántas necesita para ir y volver; la tarjeta de cada corredor muestra cuánto tiempo le queda y avisa si no le alcanza para volver. La ciudad produce 3 de comida y consume 2 cada 6 segundos; un huerto suma 2 más. Cada 36 segundos el laberinto gira: algunas filas se desplazan. Cuáles y hacia dónde es algo que tienes que descubrir observando: las celdas a la vista que cambiaron se marcan unos segundos, y el botón "Antes del giro" muestra el mapa como lo conocías antes del último giro. Lo visto antes de un giro se muestra apagado porque puede haber cambiado. Si pierdes corredores, puedes reclutar más con materiales y comida, hasta 6. Los escombros (M) dan materiales, las marcas (K) conocimiento. Con 4 materiales se construye un huerto; con 5, el taller (los corredores caminan el doble de rápido). Nadie sabe dónde está la salida: al leer 4 marcas aparece en el mapa, y entonces hay que llegar con un corredor antes de que se acabe el tiempo (8 minutos).
 </div>
 <div class="pie">Prototipo de la fase 1, tiempo real. Semilla <span id="semilla"></span>. <a href="#" id="btnNueva">Nueva partida</a> · <a href="#" id="btnCopiar">Copiar registro de partidas</a></div>
 
@@ -127,12 +134,12 @@ const cv = $("tablero"), ctx = cv.getContext("2d");
 const N = M.ANCHO, TAM = cv.width / N;
 
 let s = null, seleccion = null, pendiente = null, raciones = null, inicio = 0;
-let pausado = true, velocidadJuego = 1, ultimoTick = 0, posPrevias = new Map(), fraccion = 1;
+let pausado = true, velocidadJuego = 1, ultimoTick = 0, posPrevias = new Map(), fraccion = 1, verAntes = false;
 const MS_TICK = 1000;
 
 function nueva(semilla) {
   s = M.nuevaPartida(semilla);
-  seleccion = null; pendiente = null; raciones = null; inicio = Date.now();
+  seleccion = null; pendiente = null; raciones = null; inicio = Date.now(); verAntes = false;
   pausado = true; posPrevias = new Map(); fraccion = 1; ultimoTick = performance.now();
   $("fin").style.display = "none";
   render();
@@ -172,8 +179,10 @@ function actualizarReloj() {
 function dibujar() {
   ctx.clearRect(0, 0, cv.width, cv.height);
   const visibles = M.visibleAhora(s);
+  const antes = verAntes && s.conocidoAnterior;
+  const fuente = antes ? s.conocidoAnterior : s.conocido;
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const ch = s.conocido[y][x];
+    const ch = fuente[y][x];
     if (ch === "?") {
       ctx.fillStyle = css("--niebla");
       ctx.fillRect(x * TAM, y * TAM, TAM, TAM);
@@ -185,8 +194,8 @@ function dibujar() {
     else if (ch === "S") color = css("--salida");
     else if (ch === "M") color = css("--escombros");
     else if (ch === "K") color = css("--marca");
-    const visible = visibles.has(y * N + x);
-    const viejo = !visible && s.vistoEn[y][x] < s.giro;   // visto antes del último giro: puede haber cambiado
+    const visible = !antes && visibles.has(y * N + x);
+    const viejo = !visible && (antes || s.vistoEn[y][x] < s.giro);   // visto antes del último giro: puede haber cambiado
     ctx.globalAlpha = visible ? 1 : viejo ? .45 : .8;
     ctx.fillStyle = color;
     ctx.fillRect(x * TAM, y * TAM, TAM, TAM);
@@ -199,6 +208,16 @@ function dibujar() {
       ctx.fillText(ch, x * TAM + TAM / 2, y * TAM + TAM / 2 + 1);
     }
     ctx.globalAlpha = 1;
+  }
+  // celdas que cambiaron a la vista en el último giro
+  if (!antes && s.turno - s.cambiosEn < 6) {
+    ctx.strokeStyle = css("--acento"); ctx.lineWidth = 3;
+    for (const p of s.cambiosGiro) ctx.strokeRect(p.x * TAM + 2, p.y * TAM + 2, TAM - 4, TAM - 4);
+    ctx.lineWidth = 1;
+  }
+  if (antes) {
+    ctx.fillStyle = css("--acento"); ctx.font = `bold ${TAM * .6}px Georgia`; ctx.textAlign = "left"; ctx.textBaseline = "top";
+    ctx.fillText("Así se veía antes del último giro", 6, 6);
   }
   // ruta prevista
   const c = seleccion !== null ? s.corredores[seleccion] : null;
@@ -257,6 +276,14 @@ function render() {
   bh.title = "Cada huerto suma 2 de comida por periodo.";
   bt.disabled = !!s.fin || s.taller || s.materiales < M.COSTO_TALLER;
 
+  const br = $("btnReclutar");
+  const vivos = s.corredores.filter((k) => k.estado !== "perdido" && k.estado !== "salio").length;
+  br.textContent = `Reclutar corredor (${M.COSTO_RECLUTA.materiales} mat + ${M.COSTO_RECLUTA.comida} comida) · ${vivos} de ${M.CORREDORES_MAX}`;
+  br.disabled = !!s.fin || vivos >= M.CORREDORES_MAX || s.materiales < M.COSTO_RECLUTA.materiales || s.comida < M.COSTO_RECLUTA.comida;
+  const ba = $("btnAntes");
+  ba.disabled = !s.conocidoAnterior;
+  ba.className = verAntes ? "activo" : "";
+  ba.textContent = verAntes ? "Volver al presente" : "Antes del giro";
   $("corredores").innerHTML = s.corredores.map((k) => {
     let estado = { ciudad: "en la ciudad", fuera: `fuera · ${k.raciones} rac.`, perdido: "perdido", salio: "¡salió!" }[k.estado];
     if (k.estado === "fuera" && k.carga) estado += ` · ${k.carga} mat.`;
@@ -329,6 +356,8 @@ cv.addEventListener("click", (ev) => {
 });
 
 $("btnHuerto").onclick = () => { s = M.construir(s, "huerto"); render(); };
+$("btnReclutar").onclick = () => { s = M.reclutar(s); render(); };
+$("btnAntes").onclick = () => { verAntes = !verAntes; render(); };
 $("btnTaller").onclick = () => { s = M.construir(s, "taller"); render(); };
 $("btnPausa").onclick = () => { pausado = !pausado; ultimoTick = performance.now(); render(); };
 $("btnVel").onclick = () => { velocidadJuego = velocidadJuego === 1 ? 2 : 1; render(); };

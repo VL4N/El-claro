@@ -74,7 +74,7 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
     let g = 0;
     while (s.corredores[0].estado === "fuera" && g++ < 80) { s = M.volver(s, 0); s = M.avanzar(s); }
     ok(s.corredores[0].estado !== "fuera", "volver termina con el corredor en la ciudad o perdido");
-    if (s.corredores[0].estado === "ciudad") ok(s.corredores[0].x === 6 && s.corredores[0].y === 7, "al volver ocupa su lugar en la plaza");
+    if (s.corredores[0].estado === "ciudad") ok(s.corredores[0].x === M.casa(0).x && s.corredores[0].y === M.casa(0).y, "al volver ocupa su lugar en la plaza");
   }
 }
 
@@ -91,6 +91,19 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   const t = M.tiempoRestante(s, s.corredores[0]);
   ok(t && t.ticks > 0 && t.alcanza, "con las raciones recomendadas alcanza para volver");
   ok(M.tiempoRestante(s, s.corredores[1]) === null, "en la ciudad no hay tiempo restante");
+}
+
+// 4d. reclutar
+{
+  let s = { ...M.nuevaPartida(3), materiales: 7, comida: 10 };
+  s = M.reclutar(s);
+  ok(s.corredores.length === 4 && s.corredores[3].estado === "ciudad" && M.esCiudad(s.corredores[3].x, s.corredores[3].y), "recluta un cuarto corredor en la plaza");
+  ok(s.materiales === 4 && s.comida === 8, "reclutar cobra materiales y comida");
+  s = M.reclutar(s); s = M.reclutar(s);
+  ok(s.corredores.length === 5, "sin materiales no recluta");
+  s = { ...s, materiales: 30, comida: 30 };
+  for (let i = 0; i < 5; i++) s = M.reclutar(s);
+  ok(s.corredores.length === M.CORREDORES_MAX, "respeta el máximo de corredores");
 }
 
 // 5. atajo atraviesa una pared

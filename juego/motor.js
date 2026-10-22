@@ -6,7 +6,7 @@ export const ALTO = 15;
 // El tiempo avanza en "ticks" (un segundo de juego a velocidad normal).
 export const TICK_ECONOMIA = 6;    // cada cuántos ticks la ciudad produce y consume, y los corredores gastan una ración
 export const CICLO = 36;           // cada cuántos ticks gira el laberinto
-export const TURNOS_MAX = 360;     // duración de la partida en ticks
+export const TURNOS_MAX = 480;     // duración de la partida en ticks (8 minutos)
 export const CAPACIDAD = 3;        // materiales que carga un corredor
 export const COSTO_HUERTO = 4;
 export const COSTO_TALLER = 5;
@@ -15,7 +15,11 @@ export const PUNTOS_SALIDA = 10;
 export const RACIONES_MAX = 10;
 export const MARCAS_PARA_SALIR = 4;   // marcas leídas que hacen falta para que la salida se abra
 
-const NOMBRES = ["Ira", "Teo", "Noa"];
+const NOMBRES = ["Ira", "Teo", "Noa", "Sol", "Bru", "Lía", "Eli", "Dan", "Uma"];
+export const CORREDORES_MAX = 6;
+export const COSTO_RECLUTA = { materiales: 3, comida: 2 };
+// lugar de cada corredor en la plaza cuando está en la ciudad
+export const casa = (id) => ({ x: 6 + (id % 3), y: 6 + Math.floor(id / 3) % 3 });
 const FILAS_DERECHA = [1, 3, 5];     // filas (base 0) que giran a la derecha: mitad norte
 const FILAS_IZQUIERDA = [9, 11, 13]; // filas que giran a la izquierda: mitad sur
 export const FILAS_MOVILES = new Set([...FILAS_DERECHA, ...FILAS_IZQUIERDA]);
@@ -171,9 +175,10 @@ export function evaluarMapa(mapa) {
   const ventanas = salidaAbierta.slice(1).filter(Boolean).length;
   const distanciasOk = resumen.every((r) => r.salida === null || (r.salida >= 10 && r.salida <= 16));
   const ciudadOk = resumen.every((r) => r.alcanzables >= r.abiertas * 0.6);
-  const n = resumen[0].hallazgos.length;
-  const hallazgosOk = Array.from({ length: n }, (_, i) => resumen.filter((r) => r.hallazgos[i]).length >= 3).every(Boolean);
-  const valido = !salidaAbierta[0] && ventanas >= 2 && ventanas <= 4 && distanciasOk && ciudadOk && hallazgosOk;
+  const nh = resumen[0].hallazgos.length;
+  const hallazgosOk = Array.from({ length: nh }, (_, i) => resumen.filter((r) => r.hallazgos[i]).length >= Math.ceil(resumen.length / 2)).every(Boolean);
+  const n = resumen.length - 1;
+  const valido = !salidaAbierta[0] && ventanas >= Math.ceil(n / 4) && ventanas <= Math.ceil(n * 0.6) && distanciasOk && ciudadOk && hallazgosOk;
   return { valido, salidaAbierta, resumen };
 }
 
@@ -204,8 +209,8 @@ export function nuevaPartida(semilla = Date.now() % 1000000) {
   if (!gen) throw new Error("No se pudo generar un mapa válido con la semilla " + semilla);
   const conocido = Array.from({ length: ALTO }, () => "?".repeat(ANCHO));
   const vistoEn = Array.from({ length: ALTO }, () => new Array(ANCHO).fill(-1));
-  const corredores = NOMBRES.map((nombre, i) => ({
-    id: i, nombre, x: 6 + i, y: 7, raciones: 0, carga: 0, destino: null,
+  const corredores = NOMBRES.slice(0, 3).map((nombre, i) => ({
+    id: i, nombre, ...casa(i), raciones: 0, carga: 0, destino: null,
     estado: "ciudad", atajo: false,
   }));
   const s = {
@@ -213,6 +218,7 @@ export function nuevaPartida(semilla = Date.now() % 1000000) {
     comida: 14, materiales: 0, conocimiento: 0, hambre: 0, marcas: 0,
     huertos: 0, taller: false,
     corredores, salidaAlcanzada: false, salidaConocida: false,
+    conocidoAnterior: null, cambiosGiro: [], cambiosEn: -100,
     registro: [`El Claro despierta. Nadie sabe dónde está la salida: las marcas (K) del laberinto la señalan. Hacen falta ${MARCAS_PARA_SALIR}.`],
     fin: null,
   };
@@ -275,6 +281,18 @@ export function construir(s, que) {
   return s;
 }
 
+export function reclutar(s) {
+  if (s.fin) return s;
+  const vivos = s.corredores.filter((c) => c.estado !== "perdido" && c.estado !== "salio").length;
+  if (vivos >= CORREDORES_MAX) return s;
+  if (s.materiales < COSTO_RECLUTA.materiales || s.comida < COSTO_RECLUTA.comida) return s;
+  const id = s.corredores.length;
+  if (id >= NOMBRES.length) return s;
+  const nuevo = { id, nombre: NOMBRES[id], ...casa(id), raciones: 0, carga: 0, destino: null, estado: "ciudad", atajo: false };
+  return log({ ...s, materiales: s.materiales - COSTO_RECLUTA.materiales, comida: s.comida - COSTO_RECLUTA.comida,
+    corredores: [...s.corredores, nuevo] }, `${nuevo.nombre} se une a los corredores.`);
+}
+
 export function enviar(s, id, destino, raciones) {
   if (s.fin) return s;
   const c = s.corredores[id];
@@ -318,7 +336,7 @@ function entrar(s, c) {
   const texto = c.carga > 0
     ? `${c.nombre} vuelve a la ciudad y deposita ${c.carga} ${c.carga === 1 ? "material" : "materiales"}.`
     : `${c.nombre} vuelve a la ciudad.`;
-  const k = { ...c, x: 6 + c.id, y: 7, carga: 0, estado: "ciudad", destino: null, raciones: 0, atajo: false };
+  const k = { ...c, ...casa(c.id), carga: 0, estado: "ciudad", destino: null, raciones: 0, atajo: false };
   return log({ ...s, materiales: s.materiales + c.carga, corredores: s.corredores.map((q) => q.id === c.id ? k : q) }, texto);
 }
 
@@ -385,7 +403,7 @@ function moverCorredor(s, c) {
     else registro.push(`${c.nombre} vuelve a la ciudad.`);
     materiales += carga; carga = 0; estado = "ciudad"; raciones = 0; atajo = false;
   }
-  if (estado === "ciudad") { x = 6 + c.id; y = 7; }
+  if (estado === "ciudad") { ({ x, y } = casa(c.id)); }
   let sOut = { ...s, mapa, comida, materiales, conocimiento, marcas, registro, salidaAlcanzada, salidaConocida };
   if (salidaConocida && !s.salidaConocida) {
     // la salida aparece en el mapa conocido
@@ -443,7 +461,19 @@ export function avanzar(s) {
       const p = desplazarCoord(c.x, c.y);
       return { ...c, x: p.x, y: p.y };
     });
-    s = revelar(log({ ...s, mapa, corredores, giro: s.giro + 1 }, "El laberinto gira. Algo cambió en las paredes."));
+    const anterior = s.conocido;
+    s = revelar(log({ ...s, mapa, corredores, giro: s.giro + 1, conocidoAnterior: anterior }, "El laberinto gira. Algo cambió en las paredes."));
+    const vis = visibleAhora(s);
+    const cambios = [];
+    for (const k of vis) {
+      const x = k % ANCHO, y = Math.floor(k / ANCHO);
+      if (anterior[y][x] !== "?" && anterior[y][x] !== s.conocido[y][x]) cambios.push({ x, y });
+    }
+    s = { ...s, cambiosGiro: cambios, cambiosEn: s.turno };
+    if (cambios.length) {
+      const filas = [...new Set(cambios.map((p) => p.y + 1))].sort((a, b) => a - b);
+      s = log(s, `A la vista cambiaron ${cambios.length} celdas, en ${filas.length === 1 ? "la fila" : "las filas"} ${filas.join(", ")}. Pulsa "Antes del giro" para comparar.`);
+    }
   }
   // 5. fin
   if (s.salidaAlcanzada) {
