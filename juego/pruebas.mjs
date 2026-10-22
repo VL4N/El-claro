@@ -106,6 +106,19 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   ok(s.corredores.length === M.CORREDORES_MAX, "respeta el máximo de corredores");
 }
 
+// 4e. sala de mapas
+{
+  let s = { ...M.nuevaPartida(3), conocimiento: 2 };
+  s = M.consultarFila(s, 1);
+  ok(s.filasConocidas[1] === "derecha" && s.conocimiento === 1, "consultar una fila móvil del norte");
+  s = M.consultarFila(s, 7);
+  ok(s.filasConocidas[7] === "quieta" && s.conocimiento === 0, "la fila de la ciudad está quieta");
+  s = M.consultarFila(s, 13);
+  ok(s.filasConocidas[13] === undefined, "sin conocimiento no se consulta");
+  s = M.consultarFila({ ...s, conocimiento: 1 }, 7);
+  ok(s.conocimiento === 1, "una fila ya conocida no se cobra");
+}
+
 // 5. atajo atraviesa una pared
 {
   const mapa = ["#####", "#C#.#", "#####", "#####", "#####"];

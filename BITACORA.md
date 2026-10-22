@@ -8,6 +8,28 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-22 · Sesión 9: comparar sin tapar, y la sala de mapas
+
+**Hecho**
+
+- El autor probó "Antes del giro": le sirvió para ver qué había descubierto, pero no para entender los giros, porque la vista tapaba la partida.
+- Reemplazado por un mapa pequeño permanente debajo del tablero con el laberinto como se conocía antes del último giro, con las celdas cambiadas marcadas en los dos mapas y una nota que dice en qué filas.
+- Sala de mapas: se elige una fila y se gasta 1 conocimiento para saber si se mueve a la derecha, a la izquierda o no se mueve. Lo confirmado queda marcado en los bordes del tablero.
+- Una partida más del autor con niebla: victoria al tick 166, con taller y un perdido.
+
+**Decidido**
+
+- **Comparar, no reemplazar.** Dos mapas a la vez, el grande presente y el chico pasado. Motivo: aprender un patrón es comparar, y no se puede comparar lo que no se ve junto.
+- **La sala de mapas responde preguntas directas por fila, a 1 conocimiento cada una.** Motivo: el conocimiento viene de las marcas, que son seis por mapa y cuatro hacen falta para la salida, así que cada pregunta compite con el atajo y hay que elegir qué filas importan. Es la versión mínima de "confirmar hipótesis"; si funciona, en la biblioteca de reglas las preguntas serán sobre reglas y no sobre filas.
+- **El panel de órdenes vuelve a estar pegado a las tarjetas de corredores.** Motivo: con los paneles nuevos había quedado lejos del tablero.
+
+**Siguiente**
+
+- Preguntarle al autor si con el mapa chico y la sala de mapas entiende los giros.
+- Biblioteca de reglas de patrón para que cada partida sea distinta.
+
+---
+
 ## 2026-10-22 · Sesión 8: la puerta de la fase 1 pasa con niebla; los giros se sienten aleatorios
 
 **Hecho**

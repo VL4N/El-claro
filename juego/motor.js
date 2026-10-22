@@ -219,6 +219,7 @@ export function nuevaPartida(semilla = Date.now() % 1000000) {
     huertos: 0, taller: false,
     corredores, salidaAlcanzada: false, salidaConocida: false,
     conocidoAnterior: null, cambiosGiro: [], cambiosEn: -100,
+    filasConocidas: {},   // fila (base 0) -> "derecha" | "izquierda" | "quieta", lo que la sala de mapas confirmó
     registro: [`El Claro despierta. Nadie sabe dónde está la salida: las marcas (K) del laberinto la señalan. Hacen falta ${MARCAS_PARA_SALIR}.`],
     fin: null,
   };
@@ -291,6 +292,23 @@ export function reclutar(s) {
   const nuevo = { id, nombre: NOMBRES[id], ...casa(id), raciones: 0, carga: 0, destino: null, estado: "ciudad", atajo: false };
   return log({ ...s, materiales: s.materiales - COSTO_RECLUTA.materiales, comida: s.comida - COSTO_RECLUTA.comida,
     corredores: [...s.corredores, nuevo] }, `${nuevo.nombre} se une a los corredores.`);
+}
+
+// ---------- sala de mapas ----------
+export const COSTO_CONSULTA = 1;
+export function comportamientoFila(y) {
+  if (FILAS_DERECHA.includes(y)) return "derecha";
+  if (FILAS_IZQUIERDA.includes(y)) return "izquierda";
+  return "quieta";
+}
+export function consultarFila(s, y) {
+  if (s.fin || !enTablero(0, y)) return s;
+  if (s.filasConocidas[y]) return s;
+  if (s.conocimiento < COSTO_CONSULTA) return s;
+  const r = comportamientoFila(y);
+  const texto = { derecha: "se desplaza una celda a la derecha en cada giro", izquierda: "se desplaza una celda a la izquierda en cada giro", quieta: "no se mueve nunca" }[r];
+  return log({ ...s, conocimiento: s.conocimiento - COSTO_CONSULTA, filasConocidas: { ...s.filasConocidas, [y]: r } },
+    `Sala de mapas: la fila ${y + 1} ${texto}.`);
 }
 
 export function enviar(s, id, destino, raciones) {
@@ -472,7 +490,7 @@ export function avanzar(s) {
     s = { ...s, cambiosGiro: cambios, cambiosEn: s.turno };
     if (cambios.length) {
       const filas = [...new Set(cambios.map((p) => p.y + 1))].sort((a, b) => a - b);
-      s = log(s, `A la vista cambiaron ${cambios.length} celdas, en ${filas.length === 1 ? "la fila" : "las filas"} ${filas.join(", ")}. Pulsa "Antes del giro" para comparar.`);
+      s = log(s, `A la vista cambiaron ${cambios.length} celdas, en ${filas.length === 1 ? "la fila" : "las filas"} ${filas.join(", ")}. Compara con el mapa de antes del giro.`);
     }
   }
   // 5. fin

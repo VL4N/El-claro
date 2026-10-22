@@ -1,5 +1,50 @@
 [
-  {"fecha": "2026-10-22T20:25:01.216Z", "semilla": 130711, "resultado": "tiempo", "motivo": "Se acabaron los turnos.", "ticks": 360, "segundos": 570, "puntos": 4, "huertos": 1, "taller": true, "perdidos": 1},
-  {"fecha": "2026-10-22T20:30:17.799Z", "semilla": 704968, "resultado": "victoria", "motivo": "Un corredor encontró la salida.", "ticks": 297, "segundos": 313, "puntos": 14, "huertos": 1, "taller": false, "perdidos": 1},
-  {"fecha": "2026-10-22T20:32:41.254Z", "semilla": 20179, "resultado": "derrota", "motivo": "No quedan corredores.", "ticks": 72, "segundos": 141, "puntos": 1, "huertos": 0, "taller": false, "perdidos": 3}
+ {
+  "fecha": "2026-10-22T20:25:01.216Z",
+  "semilla": 130711,
+  "resultado": "tiempo",
+  "motivo": "Se acabaron los turnos.",
+  "ticks": 360,
+  "segundos": 570,
+  "puntos": 4,
+  "huertos": 1,
+  "taller": true,
+  "perdidos": 1
+ },
+ {
+  "fecha": "2026-10-22T20:30:17.799Z",
+  "semilla": 704968,
+  "resultado": "victoria",
+  "motivo": "Un corredor encontró la salida.",
+  "ticks": 297,
+  "segundos": 313,
+  "puntos": 14,
+  "huertos": 1,
+  "taller": false,
+  "perdidos": 1
+ },
+ {
+  "fecha": "2026-10-22T20:32:41.254Z",
+  "semilla": 20179,
+  "resultado": "derrota",
+  "motivo": "No quedan corredores.",
+  "ticks": 72,
+  "segundos": 141,
+  "puntos": 1,
+  "huertos": 0,
+  "taller": false,
+  "perdidos": 3
+ },
+ {
+  "fecha": "2026-10-22T20:46:31.903Z",
+  "semilla": 676095,
+  "resultado": "victoria",
+  "motivo": "Un corredor encontró la salida.",
+  "ticks": 166,
+  "segundos": 316,
+  "puntos": 13,
+  "huertos": 1,
+  "taller": true,
+  "perdidos": 1
+ }
 ]
