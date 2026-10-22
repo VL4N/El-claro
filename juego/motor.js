@@ -472,8 +472,11 @@ export function estimarViaje(s, destino, margen = 1) {
   const vuelta = celdaCiudadMasCercana(plan, destino);
   const celdas = ida.length + (vuelta ? vuelta.pasos : ida.length);
   const ticks = Math.ceil(celdas / velocidad(s));
-  const raciones = Math.min(RACIONES_MAX, Math.ceil(ticks / TICK_ECONOMIA) + margen);
-  return { ida: ida.length, vuelta: vuelta ? vuelta.pasos : null, celdas, ticks, raciones };
+  // lo desconocido puede esconder paredes: cada 4 celdas sin explorar en la ida suman una ración de margen
+  const desconocidas = ida.filter((p) => s.conocido[p.y][p.x] === "?").length;
+  const margenNiebla = Math.ceil(desconocidas / 4);
+  const raciones = Math.min(RACIONES_MAX, Math.ceil(ticks / TICK_ECONOMIA) + margen + margenNiebla);
+  return { ida: ida.length, vuelta: vuelta ? vuelta.pasos : null, celdas, ticks, raciones, desconocidas, margenNiebla };
 }
 
 // Ticks que le quedan a un corredor fuera antes de perderse, y si le alcanza para volver.

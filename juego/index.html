@@ -280,7 +280,7 @@ function render() {
     if (est && raciones === null) raciones = est.raciones;
     const r = raciones ?? 4;
     $("pista").textContent = pendiente
-      ? (est ? `Hasta ${M.coord(pendiente)}: ${est.ida} celdas de ida y ${est.vuelta ?? "?"} de vuelta, unos ${est.ticks} s en total. Recomendado: ${est.raciones} raciones, una de margen por si el laberinto gira.${s.conocido[pendiente.y][pendiente.x] === "?" ? " El camino cruza zona sin explorar: puede haber paredes." : ""}` : `No hay camino hasta ${M.coord(pendiente)} con lo que se sabe del laberinto.`)
+      ? (est ? `Hasta ${M.coord(pendiente)}: ${est.ida} celdas de ida y ${est.vuelta ?? "?"} de vuelta, unos ${est.ticks} s en total. Recomendado: ${est.raciones} raciones: una de margen por si el laberinto gira${est.margenNiebla ? ` y ${est.margenNiebla} más porque ${est.desconocidas} celdas del camino están sin explorar y puede haber paredes` : ""}.` : `No hay camino hasta ${M.coord(pendiente)} con lo que se sabe del laberinto.`)
       : `${c.nombre} está en la ciudad. Toca una celda para elegir destino.`;
     const faltaComida = s.comida < r;
     a.innerHTML = `<div class="fila">
