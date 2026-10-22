@@ -8,6 +8,26 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-22 · Sesión 13: dificultad según la partida
+
+**Hecho**
+
+- El patrón de cada partida se elige por nivel de dificultad, 1 a 5. En automático, el nivel es 1 más el número de victorias con las reglas actuales, hasta 5; en el nivel 5 se mezclan los dos niveles más altos. Se puede fijar a mano en la pestaña Ayuda.
+- Al terminar la partida se revela el nombre y la dificultad del patrón, y si la próxima sube de nivel.
+- Los registros de partida llevan versión de reglas, dificultad y nombre del patrón.
+
+**Decidido**
+
+- **Sube un nivel por victoria, nunca baja.** Motivo: una derrota ya castiga; bajar el nivel haría sentir que el juego se rinde por el jugador. Quien quiera repetir un nivel lo fija a mano.
+- **Solo cuentan las victorias con las reglas actuales.** Los registros llevan un número de versión; las partidas anteriores a la biblioteca de patrones no suben el nivel. Motivo: el autor ya tiene diez victorias de versiones viejas y empezaría en 5 sin haber visto un patrón fácil.
+- **El nombre del patrón se revela al final, nunca durante.** Motivo: es la recompensa de la deducción y además enseña el vocabulario para la próxima partida.
+
+**Siguiente**
+
+- Sala de mapas por hipótesis y pruebas con personas nuevas. Y la puerta de la fase 2, que la responde el autor.
+
+---
+
 ## 2026-10-22 · Sesión 12: historial de giros y marcas que hablan
 
 **Hecho**

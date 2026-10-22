@@ -159,6 +159,20 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   ok(Array.isArray(s.historial[0].cambios) && s.historial[0].antes.length === 15, "cada registro tiene el mapa de antes y los cambios");
 }
 
+// 4g. dificultad
+{
+  for (let d = 1; d <= 5; d++) for (let semilla = 1; semilla <= 6; semilla++) {
+    const pat = M.elegirPatron(M.crearRng(semilla * 31 + d), d);
+    ok(d === 5 ? pat.dificultad >= 4 : pat.dificultad === d, `dificultad ${d}: eligió ${pat.nombre} (${pat.dificultad})`);
+  }
+  const s = M.nuevaPartida(9, null, 2);
+  ok(s.patron.dificultad === 2, "nuevaPartida respeta la dificultad");
+  ok(M.dificultadSugerida(0) === 1 && M.dificultadSugerida(3) === 4 && M.dificultadSugerida(40) === 5, "la dificultad sugerida sube con las victorias y se frena en 5");
+  const nombres = new Set();
+  for (let i = 0; i < 30; i++) nombres.add(M.elegirPatron(M.crearRng(i), 1).nombre);
+  ok(nombres.size === 3, "en dificultad 1 aparecen los tres patrones fáciles");
+}
+
 // 5. atajo atraviesa una pared
 {
   const mapa = ["#####", "#C#.#", "#####", "#####", "#####"];

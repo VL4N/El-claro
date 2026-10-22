@@ -80,8 +80,23 @@ export const BIBLIOTECA = [
     lineas: [F(2, 1, "alterna"), F(12, -1, "alterna"), C(2, -1), C(12, 1), F(5, 1, "cada2"), F(9, -1, "cada2")] },
 ];
 
-export function elegirPatron(rng) {
-  return BIBLIOTECA[Math.floor(rng() * BIBLIOTECA.length)];
+export const DIFICULTAD_MAX = 5;
+
+// Elige un patrón al azar. Con `dificultad` (1 a 5) elige solo entre los de ese nivel;
+// en el nivel máximo mezcla los dos niveles más altos para que no se repita siempre el mismo.
+export function elegirPatron(rng, dificultad = null) {
+  let candidatos = BIBLIOTECA;
+  if (dificultad) {
+    const d = Math.max(1, Math.min(DIFICULTAD_MAX, dificultad | 0));
+    candidatos = BIBLIOTECA.filter((p) => d === DIFICULTAD_MAX ? p.dificultad >= d - 1 : p.dificultad === d);
+    if (!candidatos.length) candidatos = BIBLIOTECA;
+  }
+  return candidatos[Math.floor(rng() * candidatos.length)];
+}
+
+// Nivel sugerido según las partidas ya jugadas con estas reglas: sube una dificultad por victoria.
+export function dificultadSugerida(victorias) {
+  return Math.max(1, Math.min(DIFICULTAD_MAX, 1 + (victorias | 0)));
 }
 
 // Lo que dicen las marcas, en orden de lectura: primero la idea general del patrón,
@@ -257,9 +272,9 @@ export function evaluarMapa(mapa, patron) {
   return { valido, salidaAbierta, resumen };
 }
 
-export function generarMapa(semilla, patronFijo = null) {
+export function generarMapa(semilla, patronFijo = null, dificultad = null) {
   const rng = crearRng(semilla);
-  const patron = patronFijo || elegirPatron(rng);
+  const patron = patronFijo || elegirPatron(rng, dificultad);
   for (let intento = 0; intento < 3000; intento++) {
     let m = mapaAleatorio(rng);
     // la salida va en un borde, lejos del centro
@@ -280,8 +295,8 @@ export function generarMapa(semilla, patronFijo = null) {
 export const VISION = 1;            // radio de visión de un corredor (celdas, en cuadrado)
 export const VISION_CIUDAD = 1;     // anillo visible alrededor de la ciudad
 
-export function nuevaPartida(semilla = Date.now() % 1000000, patronFijo = null) {
-  const gen = generarMapa(semilla, patronFijo);
+export function nuevaPartida(semilla = Date.now() % 1000000, patronFijo = null, dificultad = null) {
+  const gen = generarMapa(semilla, patronFijo, dificultad);
   if (!gen) throw new Error("No se pudo generar un mapa válido con la semilla " + semilla);
   const conocido = Array.from({ length: ALTO }, () => "?".repeat(ANCHO));
   const vistoEn = Array.from({ length: ALTO }, () => new Array(ANCHO).fill(-1));

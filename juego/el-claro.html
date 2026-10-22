@@ -104,6 +104,7 @@
   #fin h2 { margin: 0 0 8px; }
   #fin p { margin: 0 0 10px; }
   .pie { font-size: 12px; color: var(--suave); margin-top: 10px; }
+  .pie select { font-family: inherit; font-size: 12px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--borde); background: var(--tarjeta); color: var(--tinta); }
   .pie a { color: inherit; }
 </style>
 </head>
@@ -180,9 +181,14 @@
     <p><b>Raciones.</b> En la ciudad elige cuántas lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. El juego recomienda cuántas necesita para ir y volver, con margen por lo que no se ha explorado. La tarjeta de cada corredor muestra el tiempo que le queda y avisa si no le alcanza para volver.</p>
     <p><b>El giro.</b> Cada 60 segundos algunas filas o columnas se desplazan. Cuáles y hacia dónde cambia en cada partida: hay que descubrirlo. Las celdas a la vista que cambiaron se marcan, el mapa chico de la pestaña Mapas muestra cómo lo conocías antes de cada giro (con flechas para recorrer el historial), las marcas que lees cuentan algo del patrón en palabras, y en la sala de mapas puedes gastar conocimiento para confirmar qué hace una fila o columna. Lo visto antes de un giro se muestra apagado porque puede haber cambiado.</p>
     <p><b>Hallazgos.</b> Los escombros (M) dan materiales; las marcas (K), conocimiento. Con 4 materiales se construye un huerto; con 5, el taller (los corredores caminan el doble de rápido). Reclutar un corredor cuesta 3 materiales y 2 de comida, hasta 6.</p>
+    <p><b>Dificultad.</b> Cada partida usa un patrón de giro distinto. Las primeras partidas reciben patrones fáciles; cada victoria sube un nivel, hasta 5. Abajo se puede fijar a mano.</p>
     <p><b>La salida.</b> Nadie sabe dónde está. Al leer 4 marcas aparece en el mapa, y entonces hay que llegar con un corredor antes de que se acabe el tiempo (8 minutos).</p>
   </div>
-  <div class="pie">Prototipo de la fase 2: el laberinto se aprende. Semilla <span id="semilla"></span>, patrón oculto. <a href="#" id="btnNueva">Nueva partida</a> · <a href="#" id="btnCopiar">Copiar registro de partidas</a></div>
+  <div class="pie">
+    <label>Dificultad del patrón: <select id="selDificultad"><option value="auto">Automática: sube con cada victoria</option><option value="1">1, fácil</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5, difícil</option></select></label>
+    <span id="dificultadNota"></span>
+  </div>
+  <div class="pie">Prototipo de la fase 2: el laberinto se aprende. Semilla <span id="semilla"></span>, patrón oculto de dificultad <span id="dificultadActual"></span>. <a href="#" id="btnNueva">Nueva partida</a> · <a href="#" id="btnCopiar">Copiar registro de partidas</a></div>
 </section>
 
 <div id="fin"><div class="caja">
@@ -276,8 +282,23 @@ const BIBLIOTECA = [
     lineas: [F(2, 1, "alterna"), F(12, -1, "alterna"), C(2, -1), C(12, 1), F(5, 1, "cada2"), F(9, -1, "cada2")] },
 ];
 
-function elegirPatron(rng) {
-  return BIBLIOTECA[Math.floor(rng() * BIBLIOTECA.length)];
+const DIFICULTAD_MAX = 5;
+
+// Elige un patrón al azar. Con `dificultad` (1 a 5) elige solo entre los de ese nivel;
+// en el nivel máximo mezcla los dos niveles más altos para que no se repita siempre el mismo.
+function elegirPatron(rng, dificultad = null) {
+  let candidatos = BIBLIOTECA;
+  if (dificultad) {
+    const d = Math.max(1, Math.min(DIFICULTAD_MAX, dificultad | 0));
+    candidatos = BIBLIOTECA.filter((p) => d === DIFICULTAD_MAX ? p.dificultad >= d - 1 : p.dificultad === d);
+    if (!candidatos.length) candidatos = BIBLIOTECA;
+  }
+  return candidatos[Math.floor(rng() * candidatos.length)];
+}
+
+// Nivel sugerido según las partidas ya jugadas con estas reglas: sube una dificultad por victoria.
+function dificultadSugerida(victorias) {
+  return Math.max(1, Math.min(DIFICULTAD_MAX, 1 + (victorias | 0)));
 }
 
 // Lo que dicen las marcas, en orden de lectura: primero la idea general del patrón,
@@ -453,9 +474,9 @@ function evaluarMapa(mapa, patron) {
   return { valido, salidaAbierta, resumen };
 }
 
-function generarMapa(semilla, patronFijo = null) {
+function generarMapa(semilla, patronFijo = null, dificultad = null) {
   const rng = crearRng(semilla);
-  const patron = patronFijo || elegirPatron(rng);
+  const patron = patronFijo || elegirPatron(rng, dificultad);
   for (let intento = 0; intento < 3000; intento++) {
     let m = mapaAleatorio(rng);
     // la salida va en un borde, lejos del centro
@@ -476,8 +497,8 @@ function generarMapa(semilla, patronFijo = null) {
 const VISION = 1;            // radio de visión de un corredor (celdas, en cuadrado)
 const VISION_CIUDAD = 1;     // anillo visible alrededor de la ciudad
 
-function nuevaPartida(semilla = Date.now() % 1000000, patronFijo = null) {
-  const gen = generarMapa(semilla, patronFijo);
+function nuevaPartida(semilla = Date.now() % 1000000, patronFijo = null, dificultad = null) {
+  const gen = generarMapa(semilla, patronFijo, dificultad);
   if (!gen) throw new Error("No se pudo generar un mapa válido con la semilla " + semilla);
   const conocido = Array.from({ length: ALTO }, () => "?".repeat(ANCHO));
   const vistoEn = Array.from({ length: ALTO }, () => new Array(ANCHO).fill(-1));
@@ -828,7 +849,7 @@ function puntos(s) {
   return s.materiales + s.conocimiento + (s.salidaAlcanzada ? PUNTOS_SALIDA : 0);
 }
 
-return { ANCHO, ALTO, TICK_ECONOMIA, CICLO, TURNOS_MAX, CAPACIDAD, COSTO_HUERTO, COSTO_TALLER, COSTO_ATAJO, PUNTOS_SALIDA, RACIONES_MAX, MARCAS_PARA_SALIR, CORREDORES_MAX, COSTO_RECLUTA, casa, crearRng, esCiudad, enTablero, celda, pasable, BIBLIOTECA, elegirPatron, pistasDePatron, pasoLinea, lineaDePatron, desplazarMapa, desplazarCoord, camino, distancias, celdaCiudadMasCercana, evaluarMapa, generarMapa, VISION, VISION_CIUDAD, nuevaPartida, revelar, visibleAhora, mapaPlan, revelarTodo, velocidad, produccion, CONSUMO, construir, reclutar, COSTO_CONSULTA, claveLinea, nombreLinea, comportamientoLinea, consultarLinea, enviar, cambiarDestino, volver, usarAtajo, coord, avanzar, terminarTurno, ticksHastaGiro, ticksHastaRacion, estimarViaje, tiempoRestante, puntos };
+return { ANCHO, ALTO, TICK_ECONOMIA, CICLO, TURNOS_MAX, CAPACIDAD, COSTO_HUERTO, COSTO_TALLER, COSTO_ATAJO, PUNTOS_SALIDA, RACIONES_MAX, MARCAS_PARA_SALIR, CORREDORES_MAX, COSTO_RECLUTA, casa, crearRng, esCiudad, enTablero, celda, pasable, BIBLIOTECA, DIFICULTAD_MAX, elegirPatron, dificultadSugerida, pistasDePatron, pasoLinea, lineaDePatron, desplazarMapa, desplazarCoord, camino, distancias, celdaCiudadMasCercana, evaluarMapa, generarMapa, VISION, VISION_CIUDAD, nuevaPartida, revelar, visibleAhora, mapaPlan, revelarTodo, velocidad, produccion, CONSUMO, construir, reclutar, COSTO_CONSULTA, claveLinea, nombreLinea, comportamientoLinea, consultarLinea, enviar, cambiarDestino, volver, usarAtajo, coord, avanzar, terminarTurno, ticksHastaGiro, ticksHastaRacion, estimarViaje, tiempoRestante, puntos };
 })();
 
 
@@ -842,8 +863,19 @@ const cvAntes = $("antes"), ctxAntes = cvAntes.getContext("2d");
 let giroVisto = null; // índice en s.historial que se muestra; null = el último
 const MS_TICK = 1000;
 
+const VERSION_REGLAS = 2; // sube cuando cambian las reglas y las partidas viejas dejan de contar para la dificultad
+function victoriasConEstasReglas() {
+  return leerPartidas().filter((p) => p.version === VERSION_REGLAS && p.resultado === "victoria").length;
+}
+function dificultadElegida() {
+  let manual = null;
+  try { manual = localStorage.getItem("elclaro.dificultad"); } catch {}
+  if (manual && manual !== "auto") return { nivel: +manual, auto: false };
+  return { nivel: M.dificultadSugerida(victoriasConEstasReglas()), auto: true };
+}
 function nueva(semilla) {
-  s = M.nuevaPartida(semilla);
+  const d = dificultadElegida();
+  s = M.nuevaPartida(semilla, null, d.nivel);
   seleccion = null; pendiente = null; raciones = null; inicio = Date.now(); giroVisto = null;
   pausado = true; posPrevias = new Map(); fraccion = 1; ultimoTick = performance.now();
   $("fin").style.display = "none";
@@ -1008,6 +1040,10 @@ function render() {
   $("materiales").textContent = s.materiales;
   $("conocimiento").textContent = s.conocimiento;
   $("semilla").textContent = s.semilla;
+  $("dificultadActual").textContent = s.patron.dificultad;
+  const dsel = $("selDificultad");
+  try { dsel.value = localStorage.getItem("elclaro.dificultad") || "auto"; } catch { dsel.value = "auto"; }
+  $("dificultadNota").textContent = dsel.value === "auto" ? `Ahora: ${M.dificultadSugerida(victoriasConEstasReglas())}, con ${victoriasConEstasReglas()} ${victoriasConEstasReglas() === 1 ? "victoria" : "victorias"} con estas reglas. Se aplica en la próxima partida.` : "Se aplica en la próxima partida.";
   const bh = $("btnHuerto");
   bh.textContent = `Huerto (${M.COSTO_HUERTO})${s.huertos ? " ×" + s.huertos : ""}`;
   bh.disabled = !!s.fin || s.materiales < M.COSTO_HUERTO;
@@ -1124,6 +1160,7 @@ $("btnHuerto").onclick = () => { s = M.construir(s, "huerto"); render(); };
 $("btnReclutar").onclick = () => { s = M.reclutar(s); render(); };
 $("btnConsultar").onclick = () => { const [t, i] = $("selLinea").value.split(":"); s = M.consultarLinea(s, t, +i); render(); };
 $("selLinea").onchange = () => render();
+$("selDificultad").onchange = () => { try { localStorage.setItem("elclaro.dificultad", $("selDificultad").value); } catch {} render(); };
 $("giroPrev").onclick = () => { const i = s.historial.indexOf(entradaHistorial()); giroVisto = Math.max(0, i - 1); render(); };
 $("giroNext").onclick = () => { const i = s.historial.indexOf(entradaHistorial()); giroVisto = i + 1 >= s.historial.length - 1 ? null : i + 1; render(); };
 for (const b of document.querySelectorAll("#pestanas button")) b.onclick = () => {
@@ -1151,7 +1188,7 @@ function leerPartidas() { try { return JSON.parse(localStorage.getItem("elclaro.
 function guardarPartida() {
   try {
     const lista = leerPartidas();
-    lista.push({ fecha: new Date().toISOString(), semilla: s.semilla, resultado: s.fin.tipo, motivo: s.fin.motivo,
+    lista.push({ version: VERSION_REGLAS, fecha: new Date().toISOString(), semilla: s.semilla, dificultad: s.patron.dificultad, patron: s.patron.nombre, resultado: s.fin.tipo, motivo: s.fin.motivo,
       ticks: s.turno, segundos: Math.round((Date.now() - inicio) / 1000), puntos: M.puntos(s),
       huertos: s.huertos, taller: s.taller, perdidos: s.corredores.filter((k) => k.estado === "perdido").length });
     localStorage.setItem("elclaro.partidas", JSON.stringify(lista));
@@ -1162,7 +1199,11 @@ function mostrarFin() {
   if (!finGuardado) { guardarPartida(); finGuardado = true; }
   $("finTitulo").textContent = { victoria: "Salieron del laberinto", derrota: "El Claro cae", tiempo: "Se acabó el tiempo" }[s.fin.tipo];
   $("finMotivo").textContent = `${s.fin.motivo} Tiempo jugado: ${mmss(s.turno)}.`;
-  $("finPuntos").textContent = `Puntos: ${M.puntos(s)} (materiales + conocimiento${s.salidaAlcanzada ? " + 10 por la salida" : ""}). Partidas en este navegador: ${leerPartidas().length}.`;
+  const d = dificultadElegida();
+  const progreso = d.auto
+    ? (s.fin.tipo === "victoria" && s.patron.dificultad < M.DIFICULTAD_MAX ? ` La próxima partida sube a dificultad ${M.dificultadSugerida(victoriasConEstasReglas())}.` : ` La próxima partida sigue en dificultad ${M.dificultadSugerida(victoriasConEstasReglas())}.`)
+    : ` Dificultad fijada a mano en ${d.nivel}.`;
+  $("finPuntos").textContent = `Puntos: ${M.puntos(s)} (materiales + conocimiento${s.salidaAlcanzada ? " + 10 por la salida" : ""}). El patrón era «${s.patron.nombre}», dificultad ${s.patron.dificultad}.${progreso} Partidas en este navegador: ${leerPartidas().length}.`;
   $("fin").style.display = "flex";
 }
 const _nueva = nueva;

@@ -1,6 +1,6 @@
 # Biblioteca de reglas del laberinto
 
-Cada partida elige **un patrón** de esta biblioteca, según la semilla. El jugador no sabe cuál. Lo descubre observando qué cambia en cada giro y confirmando líneas en la sala de mapas.
+Cada partida elige **un patrón** de esta biblioteca, según la semilla y el nivel de dificultad. El jugador no sabe cuál hasta el final. Lo descubre observando qué cambia en cada giro y confirmando líneas en la sala de mapas.
 
 ## Cómo está armado un patrón
 
@@ -47,7 +47,10 @@ Cada marca leída revela una pista en palabras, en este orden:
 
 Las pistas no reemplazan a la sala de mapas: dicen dónde mirar, y la sala confirma hacia dónde.
 
+## Dificultad
+
+En automático, las primeras partidas usan patrones de dificultad 1 y cada victoria sube un nivel, hasta 5. En el nivel 5 se mezclan los patrones de 4 y 5. El nivel nunca baja solo; se puede fijar a mano en la pestaña Ayuda. Al terminar la partida se revela el nombre y la dificultad del patrón.
+
 ## Pendiente para esta fase
 
-- Elegir la dificultad del patrón según la partida (hoy se elige al azar entre los doce).
 - Que la sala de mapas permita preguntar por hipótesis ("¿las filas pares van a la derecha?") y no solo por líneas.
