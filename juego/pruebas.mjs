@@ -128,17 +128,18 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   console.log("partidas al azar:", JSON.stringify(resultados));
 }
 
-// 6b. la salida sellada no da la victoria
+// 6b. la salida oculta no da la victoria
 {
-  let s = M.nuevaPartida(2);
+  let s = M.revelarTodo(M.nuevaPartida(2));
+  s = { ...s, salidaConocida: false };
   let sal = null;
   for (let y = 0; y < 15; y++) for (let x = 0; x < 15; x++) if (s.mapa[y][x] === "S") sal = { x, y };
   // forzamos un corredor al lado de la salida y lo mandamos
   const vecino = [[1,0],[-1,0],[0,1],[0,-1]].map(([dx,dy]) => ({ x: sal.x + dx, y: sal.y + dy })).find((p) => M.pasable(s.mapa, p.x, p.y));
   s = { ...s, corredores: s.corredores.map((c) => c.id === 0 ? { ...c, ...vecino, estado: "fuera", raciones: 5, destino: sal } : c) };
   s = M.avanzar(s);
-  ok(!s.salidaAlcanzada && s.corredores[0].estado === "fuera", "sin marcas la salida está sellada");
-  s = { ...s, marcas: M.MARCAS_PARA_SALIR, corredores: s.corredores.map((c) => c.id === 0 ? { ...c, ...vecino, destino: sal } : c) };
+  ok(!s.salidaAlcanzada && s.corredores[0].estado === "fuera", "sin marcas la salida no se puede cruzar");
+  s = { ...s, marcas: M.MARCAS_PARA_SALIR, salidaConocida: true, corredores: s.corredores.map((c) => c.id === 0 ? { ...c, ...vecino, destino: sal } : c) };
   s = M.avanzar(s);
   ok(s.salidaAlcanzada && s.fin && s.fin.tipo === "victoria", "con las marcas leídas se cruza la salida");
 }
@@ -147,8 +148,9 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
 {
   let victorias = 0;
   for (let semilla = 1; semilla <= 20; semilla++) {
-    let s = { ...M.nuevaPartida(semilla), marcas: M.MARCAS_PARA_SALIR };
+    let s = { ...M.revelarTodo(M.nuevaPartida(semilla)), marcas: M.MARCAS_PARA_SALIR, salidaConocida: true };
     while (!s.fin) {
+      s = M.revelarTodo(s); // el bot juega con información completa
       // buscar la salida en el mapa actual
       let sal = null;
       for (let y = 0; y < 15; y++) for (let x = 0; x < 15; x++) if (s.mapa[y][x] === "S") sal = { x, y };
@@ -166,6 +168,32 @@ console.log(`mapas válidos: ${generados}/30, intentos promedio: ${(intentosTota
   }
   console.log(`victorias con plan directo: ${victorias}/20`);
   ok(victorias >= 8, "la salida debería ser alcanzable en al menos 8 de 20 semillas");
+}
+
+// 8. niebla: al inicio solo se conoce el entorno de la ciudad, y explorar destapa
+{
+  let s = M.nuevaPartida(3);
+  const desconocidas = s.conocido.join("").split("").filter((c) => c === "?").length;
+  ok(desconocidas > 150 && desconocidas < 225, "al inicio casi todo es desconocido");
+  ok(!s.conocido.join("").includes("S"), "la salida no se ve al inicio");
+  const d = M.distancias(s.mapa, { x: 7, y: 7 });
+  let lejos = null;
+  for (const [k, v] of d) if (v >= 6 && !M.esCiudad(k % 15, Math.floor(k / 15))) { lejos = { x: k % 15, y: Math.floor(k / 15) }; break; }
+  s = M.enviar(s, 0, lejos, 6);
+  for (let i = 0; i < 8; i++) s = M.avanzar(s);
+  const despues = s.conocido.join("").split("").filter((c) => c === "?").length;
+  ok(despues < desconocidas, "explorar destapa celdas");
+  // la ruta se planifica con lo conocido: un corredor nunca atraviesa una pared real sin atajo
+  let s2 = M.nuevaPartida(4);
+  const rng = M.crearRng(1);
+  for (let t = 0; t < 120 && !s2.fin; t++) {
+    for (const c of s2.corredores) {
+      if (c.estado === "ciudad" && rng() < 0.2) s2 = M.enviar(s2, c.id, { x: Math.floor(rng() * 15), y: Math.floor(rng() * 15) }, 6);
+      else if (c.estado === "fuera" && !c.destino) s2 = M.volver(s2, c.id);
+    }
+    s2 = M.avanzar(s2);
+    for (const c of s2.corredores) if (c.estado === "fuera") ok(s2.mapa[c.y][c.x] !== "#", `corredor dentro de una pared en tick ${t}`);
+  }
 }
 
 console.log(fallos === 0 ? "TODO OK" : `${fallos} fallos`);

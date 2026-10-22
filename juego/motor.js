@@ -196,21 +196,61 @@ export function generarMapa(semilla) {
 }
 
 // ---------- estado ----------
+export const VISION = 1;            // radio de visión de un corredor (celdas, en cuadrado)
+export const VISION_CIUDAD = 1;     // anillo visible alrededor de la ciudad
+
 export function nuevaPartida(semilla = Date.now() % 1000000) {
   const gen = generarMapa(semilla);
   if (!gen) throw new Error("No se pudo generar un mapa válido con la semilla " + semilla);
+  const conocido = Array.from({ length: ALTO }, () => "?".repeat(ANCHO));
+  const vistoEn = Array.from({ length: ALTO }, () => new Array(ANCHO).fill(-1));
   const corredores = NOMBRES.map((nombre, i) => ({
     id: i, nombre, x: 6 + i, y: 7, raciones: 0, carga: 0, destino: null,
     estado: "ciudad", atajo: false,
   }));
-  return {
-    semilla, turno: 1, mapa: gen.mapa,
+  const s = {
+    semilla, turno: 1, mapa: gen.mapa, conocido, vistoEn, giro: 0,
     comida: 14, materiales: 0, conocimiento: 0, hambre: 0, marcas: 0,
     huertos: 0, taller: false,
-    corredores, salidaAlcanzada: false,
-    registro: [`El Claro despierta. La salida está sellada: hay que leer ${MARCAS_PARA_SALIR} marcas para abrirla.`],
+    corredores, salidaAlcanzada: false, salidaConocida: false,
+    registro: [`El Claro despierta. Nadie sabe dónde está la salida: las marcas (K) del laberinto la señalan. Hacen falta ${MARCAS_PARA_SALIR}.`],
     fin: null,
   };
+  return revelar(s);
+}
+
+// ---------- niebla ----------
+// Lo que el jugador sabe del laberinto. '?' es desconocido. La salida solo aparece cuando se leyeron las marcas.
+export function revelar(s) {
+  const conocido = s.conocido.map((f) => f.split(""));
+  const vistoEn = s.vistoEn.map((f) => f.slice());
+  const ver = (cx, cy, r) => {
+    for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) {
+      if (!enTablero(x, y)) continue;
+      let ch = s.mapa[y][x];
+      if (ch === "S" && !s.salidaConocida) ch = ".";
+      conocido[y][x] = ch; vistoEn[y][x] = s.giro;
+    }
+  };
+  ver(7, 7, 1 + VISION_CIUDAD);
+  for (const c of s.corredores) if (c.estado === "fuera") ver(c.x, c.y, VISION);
+  return { ...s, conocido: conocido.map((f) => f.join("")), vistoEn };
+}
+
+export function visibleAhora(s) {
+  const v = new Set();
+  const marcar = (cx, cy, r) => { for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) if (enTablero(x, y)) v.add(y * ANCHO + x); };
+  marcar(7, 7, 1 + VISION_CIUDAD);
+  for (const c of s.corredores) if (c.estado === "fuera") marcar(c.x, c.y, VISION);
+  return v;
+}
+
+// Mapa para planificar rutas: lo desconocido se supone transitable.
+export function mapaPlan(s) { return s.conocido.map((f) => f.replace(/\?/g, ".")); }
+
+// Para pruebas y depuración: destapa todo el mapa.
+export function revelarTodo(s) {
+  return { ...s, salidaConocida: true, conocido: s.mapa.slice(), vistoEn: s.vistoEn.map((f) => f.map(() => s.giro)) };
 }
 
 const log = (s, texto) => ({ ...s, registro: [...s.registro, texto] });
@@ -239,10 +279,11 @@ export function enviar(s, id, destino, raciones) {
   if (s.fin) return s;
   const c = s.corredores[id];
   if (c.estado !== "ciudad") return s;
-  if (!pasable(s.mapa, destino.x, destino.y) || celda(s.mapa, destino.x, destino.y) === "C") return s;
+  const plan = mapaPlan(s);
+  if (!pasable(plan, destino.x, destino.y) || celda(plan, destino.x, destino.y) === "C") return s;
   raciones = Math.max(1, Math.min(RACIONES_MAX, raciones | 0));
   if (s.comida < raciones) return s;
-  const salida = celdaCiudadMasCercana(s.mapa, destino);
+  const salida = celdaCiudadMasCercana(plan, destino);
   if (!salida) return s;
   const corredores = s.corredores.map((k) => k.id === id ? { ...k, x: salida.x, y: salida.y, raciones, destino, estado: "fuera" } : k);
   return log({ ...s, comida: s.comida - raciones, corredores },
@@ -252,7 +293,7 @@ export function enviar(s, id, destino, raciones) {
 export function cambiarDestino(s, id, destino) {
   if (s.fin) return s;
   const c = s.corredores[id];
-  if (c.estado !== "fuera" || !pasable(s.mapa, destino.x, destino.y)) return s;
+  if (c.estado !== "fuera" || !pasable(mapaPlan(s), destino.x, destino.y)) return s;
   return { ...s, corredores: s.corredores.map((k) => k.id === id ? { ...k, destino } : k) };
 }
 
@@ -260,7 +301,7 @@ export function volver(s, id) {
   const c = s.corredores[id];
   if (c.estado !== "fuera") return s;
   if (celda(s.mapa, c.x, c.y) === "C") return entrar(s, c);
-  const objetivo = celdaCiudadMasCercana(s.mapa, c) || { x: 7, y: 7 };
+  const objetivo = celdaCiudadMasCercana(mapaPlan(s), c) || { x: 7, y: 7 };
   return cambiarDestino(s, id, { x: objetivo.x, y: objetivo.y });
 }
 
@@ -285,21 +326,28 @@ function entrar(s, c) {
 function moverCorredor(s, c) {
   if (c.estado !== "fuera" || !c.destino) return { s, c };
   let mapa = s.mapa;
-  const ruta = camino(mapa, c, c.destino, c.atajo ? 1 : 0);
+  const plan = mapaPlan(s);
+  if (plan[c.destino.y][c.destino.x] === "#") {
+    return { s: log(s, `${c.nombre} descubre que su destino ${coord(c.destino)} es pared. Espera órdenes.`), c: { ...c, destino: null } };
+  }
+  const ruta = camino(plan, c, c.destino, c.atajo ? 1 : 0);
   if (!ruta) {
-    return { s: log(s, `${c.nombre} no encuentra camino hacia su destino. Espera.`), c };
+    return { s: log(s, `${c.nombre} no encuentra camino hacia ${coord(c.destino)} con lo que se sabe del laberinto. Espera.`), c };
   }
   let pasos = Math.min(velocidad(s), ruta.length);
   let { x, y, carga, atajo } = c;
   let comida = s.comida, materiales = s.materiales, conocimiento = s.conocimiento, marcas = s.marcas;
   let registro = s.registro.slice();
-  let salidaAlcanzada = s.salidaAlcanzada;
+  let salidaAlcanzada = s.salidaAlcanzada, salidaConocida = s.salidaConocida;
   let estado = c.estado, destino = c.destino, raciones = c.raciones;
   for (let i = 0; i < pasos; i++) {
     const p = ruta[i];
     const ch = mapa[p.y][p.x];
     const veniaDeFuera = mapa[y][x] !== "C";
-    if (ch === "#") { atajo = false; registro.push(`${c.nombre} atraviesa una pared en ${coord(p)}.`); }
+    if (ch === "#") {
+      if (!atajo) { registro.push(`${c.nombre} se topa con una pared en ${coord(p)}.`); break; }
+      atajo = false; registro.push(`${c.nombre} atraviesa una pared en ${coord(p)}.`);
+    }
     x = p.x; y = p.y;
     if (ch === "M") {
       const n = 1 + (hash(s.semilla, s.turno, c.id, i) % 2);
@@ -311,13 +359,14 @@ function moverCorredor(s, c) {
       conocimiento += 1; marcas += 1;
       mapa = ponerCelda(mapa, x, y, ".");
       const faltan = MARCAS_PARA_SALIR - marcas;
-      registro.push(`${c.nombre} lee una marca en ${coord(p)}: +1 conocimiento.${faltan > 0 ? ` Faltan ${faltan} para abrir la salida.` : marcas === MARCAS_PARA_SALIR ? " La salida se abre." : ""}`);
-    } else if (ch === "S") {
-      if (marcas < MARCAS_PARA_SALIR) {
-        registro.push(`${c.nombre} llega a la salida, pero está sellada. Faltan ${MARCAS_PARA_SALIR - marcas} marcas por leer.`);
-        x = p.x; y = p.y; destino = null;
-        break;
-      }
+      if (faltan > 0) registro.push(`${c.nombre} lee una marca en ${coord(p)}: +1 conocimiento. Faltan ${faltan} para saber dónde está la salida.`);
+      else if (!salidaConocida) {
+        salidaConocida = true;
+        let sp = null;
+        for (let yy = 0; yy < ALTO; yy++) for (let xx = 0; xx < ANCHO; xx++) if (s.mapa[yy][xx] === "S") sp = { x: xx, y: yy };
+        registro.push(`${c.nombre} lee la última marca en ${coord(p)}. Juntas, señalan la salida: está en ${coord(sp)}.`);
+      } else registro.push(`${c.nombre} lee una marca en ${coord(p)}: +1 conocimiento.`);
+    } else if (ch === "S" && salidaConocida) {
       salidaAlcanzada = true;
       registro.push(`${c.nombre} cruza la salida en ${coord(p)}.`);
       estado = "salio"; destino = null;
@@ -337,10 +386,14 @@ function moverCorredor(s, c) {
     materiales += carga; carga = 0; estado = "ciudad"; raciones = 0; atajo = false;
   }
   if (estado === "ciudad") { x = 6 + c.id; y = 7; }
-  return {
-    s: { ...s, mapa, comida, materiales, conocimiento, marcas, registro, salidaAlcanzada },
-    c: { ...c, x, y, carga, atajo, estado, destino, raciones },
-  };
+  let sOut = { ...s, mapa, comida, materiales, conocimiento, marcas, registro, salidaAlcanzada, salidaConocida };
+  if (salidaConocida && !s.salidaConocida) {
+    // la salida aparece en el mapa conocido
+    const conocido = sOut.conocido.map((f) => f.split(""));
+    for (let yy = 0; yy < ALTO; yy++) for (let xx = 0; xx < ANCHO; xx++) if (mapa[yy][xx] === "S") conocido[yy][xx] = "S";
+    sOut = { ...sOut, conocido: conocido.map((f) => f.join("")) };
+  }
+  return { s: sOut, c: { ...c, x, y, carga, atajo, estado, destino, raciones } };
 }
 
 function hash(...nums) {
@@ -381,7 +434,7 @@ export function avanzar(s) {
     }
     return { ...c, raciones };
   });
-  s = { ...s, corredores };
+  s = revelar({ ...s, corredores });
   // 4. ciclo
   if (s.turno % CICLO === 0) {
     const mapa = desplazarMapa(s.mapa);
@@ -390,7 +443,7 @@ export function avanzar(s) {
       const p = desplazarCoord(c.x, c.y);
       return { ...c, x: p.x, y: p.y };
     });
-    s = log({ ...s, mapa, corredores }, "El laberinto gira. Las filas marcadas se desplazan una celda.");
+    s = revelar(log({ ...s, mapa, corredores, giro: s.giro + 1 }, "El laberinto gira. Algo cambió en las paredes."));
   }
   // 5. fin
   if (s.salidaAlcanzada) {
@@ -411,11 +464,12 @@ export const ticksHastaRacion = (s) => TICK_ECONOMIA - ((s.turno - 1) % TICK_ECO
 // Estima un viaje de ida y vuelta desde la ciudad hasta `destino` con el laberinto como está ahora.
 // Devuelve null si no hay camino. `margen` suma raciones por si el laberinto gira en el camino.
 export function estimarViaje(s, destino, margen = 1) {
-  const salida = celdaCiudadMasCercana(s.mapa, destino);
+  const plan = mapaPlan(s);
+  const salida = celdaCiudadMasCercana(plan, destino);
   if (!salida) return null;
-  const ida = camino(s.mapa, salida, destino);
+  const ida = camino(plan, salida, destino);
   if (!ida) return null;
-  const vuelta = celdaCiudadMasCercana(s.mapa, destino);
+  const vuelta = celdaCiudadMasCercana(plan, destino);
   const celdas = ida.length + (vuelta ? vuelta.pasos : ida.length);
   const ticks = Math.ceil(celdas / velocidad(s));
   const raciones = Math.min(RACIONES_MAX, Math.ceil(ticks / TICK_ECONOMIA) + margen);
@@ -426,7 +480,7 @@ export function estimarViaje(s, destino, margen = 1) {
 export function tiempoRestante(s, c) {
   if (c.estado !== "fuera") return null;
   const ticks = (c.raciones - 1) * TICK_ECONOMIA + ticksHastaRacion(s);
-  const casa = celdaCiudadMasCercana(s.mapa, c);
+  const casa = celdaCiudadMasCercana(mapaPlan(s), c);
   const ticksVuelta = casa ? Math.ceil(casa.pasos / velocidad(s)) : null;
   return { ticks, ticksVuelta, alcanza: ticksVuelta !== null && ticksVuelta <= ticks };
 }

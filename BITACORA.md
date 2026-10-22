@@ -8,6 +8,30 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-22 · Sesión 7: la fase 1 no pasa su puerta, y se sabe por qué
+
+**Hecho**
+
+- El autor respondió la puerta de la fase 1 tras ocho partidas: **no jugaría 20 minutos seguidos, se vuelve repetitivo**. La única duda real vino de las flechas del borde, que no entendió. Lo obvio: esperar a que la salida tuviera ruta.
+- Sus dos propuestas: ir descubriendo el mapa, y que la salida no aparezca hasta tener todas las pistas. Son el contenido de la fase 2.
+- Implementado en el motor y la interfaz: niebla de guerra, regla del giro oculta y salida invisible hasta leer 4 marcas.
+
+**Decidido**
+
+- **La fase 1 se cierra como "no pasa, causa identificada".** La causa es información completa: con el mapa y la regla a la vista, la partida se resuelve mirando. No se arregla con números; se arregla con descubrimiento. Por eso se pasa a la fase 2 sin más ajustes de balance.
+- **Niebla de guerra.** Al inicio solo se conoce el entorno de la ciudad. Cada corredor destapa un radio de una celda a su paso. Lo visto se recuerda. Motivo: cada partida se vuelve distinta y mandar un corredor a lo desconocido es una decisión con riesgo real.
+- **Las rutas se planifican con lo que se sabe, suponiendo transitable lo desconocido.** Si el corredor se topa con una pared real, se detiene, la destapa y replanifica al segundo siguiente. Si el destino resulta ser pared, se queda esperando órdenes. Motivo: el corredor no puede saber más que el jugador; si usara el mapa real, filtraría información.
+- **La regla del giro es oculta.** Se quitaron las flechas y el sombreado de filas. El reloj sigue diciendo cuándo gira; cuáles filas y hacia dónde se descubre observando. Lo visto antes del último giro se dibuja apagado porque puede haber cambiado. Motivo: es el pilar "el laberinto se aprende", y además elimina la confusión de las flechas.
+- **La salida es invisible hasta leer 4 marcas.** Al leer la cuarta, el registro dice dónde está y aparece en el mapa. Motivo: propuesta directa del autor; reemplaza el "sello" de la sesión 6 con algo más claro.
+- **Las pruebas con información completa usan `revelarTodo`.** Motivo: la verificación de "la salida es alcanzable" sigue valiendo, pero el bot debe ver el mapa real para hacerla.
+
+**Siguiente**
+
+- Que el autor juegue con niebla y responda de nuevo la puerta: ¿jugaría 20 minutos seguidos?
+- Fase 2 propiamente dicha: historial de giros y biblioteca de reglas de patrón, cuando la niebla esté validada.
+
+---
+
 ## 2026-10-22 · Sesión 6: seis partidas del autor y la salida sellada
 
 **Hecho**

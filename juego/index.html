@@ -18,19 +18,19 @@
     --papel: #f5efe4; --tinta: #221f1b; --suave: #6b6257; --borde: #d8cfc0;
     --pared: #2b2723; --corredor: #fffdf8; --movil: #ebe2d1; --ciudad: #d9a441;
     --salida: #4f9a5e; --escombros: #b9b1a3; --marca: #5f82c2; --acento: #b4532a;
-    --tarjeta: #fbf8f2;
+    --tarjeta: #fbf8f2; --niebla: #cfc6b5;
   }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
     --papel: #1d1a16; --tinta: #efe7d8; --suave: #a79d8e; --borde: #3a342c;
     --pared: #0c0b09; --corredor: #2a2620; --movil: #35302a; --ciudad: #c9952f;
     --salida: #4f9a5e; --escombros: #6e675c; --marca: #5f82c2; --acento: #e0744a;
-    --tarjeta: #262219; color-scheme: dark;
+    --tarjeta: #262219; --niebla: #141210; color-scheme: dark;
   } }
   :root[data-theme="dark"] {
     --papel: #1d1a16; --tinta: #efe7d8; --suave: #a79d8e; --borde: #3a342c;
     --pared: #0c0b09; --corredor: #2a2620; --movil: #35302a; --ciudad: #c9952f;
     --salida: #4f9a5e; --escombros: #6e675c; --marca: #5f82c2; --acento: #e0744a;
-    --tarjeta: #262219; color-scheme: dark;
+    --tarjeta: #262219; --niebla: #141210; color-scheme: dark;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--papel); color: var(--tinta); font-family: Georgia, "Times New Roman", serif; }
@@ -108,7 +108,7 @@
 <div class="registro" id="registro"></div>
 
 <div class="leyenda">
-  <b>Cómo se juega.</b> Todo pasa a la vez: pulsa Jugar y el tiempo corre. Puedes pausar cuando quieras para pensar. Toca un corredor y luego una celda para darle destino. En la ciudad elige cuántas raciones lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. El juego te recomienda cuántas necesita para ir y volver; la tarjeta de cada corredor muestra cuánto tiempo le queda y avisa si no le alcanza para volver. La ciudad produce 3 de comida y consume 2 cada 6 segundos; un huerto suma 2 más. Las filas sombreadas giran cada 36 segundos: las del norte a la derecha, las del sur a la izquierda. Los escombros (M) dan materiales, las marcas (K) conocimiento. Con 4 materiales se construye un huerto (más comida); con 5, el taller (los corredores caminan el doble de rápido, así que los viajes necesitan la mitad de raciones). La salida (S) está sellada: hay que leer 4 marcas para abrirla, y recién entonces cruzarla con un corredor antes de que se acabe el tiempo (6 minutos).
+  <b>Cómo se juega.</b> Todo pasa a la vez: pulsa Jugar y el tiempo corre. Puedes pausar cuando quieras para pensar. El laberinto empieza a oscuras: solo se conoce lo que rodea a la ciudad, y los corredores van destapando lo que ven a su paso. Toca un corredor y luego una celda, aunque sea desconocida, para darle destino. En la ciudad elige cuántas raciones lleva: cada 6 segundos fuera gasta una, y sin raciones se pierde. El juego te recomienda cuántas necesita para ir y volver; la tarjeta de cada corredor muestra cuánto tiempo le queda y avisa si no le alcanza para volver. La ciudad produce 3 de comida y consume 2 cada 6 segundos; un huerto suma 2 más. Cada 36 segundos el laberinto gira: algunas filas se desplazan. Cuáles y hacia dónde es algo que tienes que descubrir observando; lo que viste antes de un giro se muestra apagado porque puede haber cambiado. Los escombros (M) dan materiales, las marcas (K) conocimiento. Con 4 materiales se construye un huerto; con 5, el taller (los corredores caminan el doble de rápido). Nadie sabe dónde está la salida: al leer 4 marcas aparece en el mapa, y entonces hay que llegar con un corredor antes de que se acabe el tiempo (6 minutos).
 </div>
 <div class="pie">Prototipo de la fase 1, tiempo real. Semilla <span id="semilla"></span>. <a href="#" id="btnNueva">Nueva partida</a> · <a href="#" id="btnCopiar">Copiar registro de partidas</a></div>
 
@@ -171,14 +171,23 @@ function actualizarReloj() {
 // ---------- dibujo ----------
 function dibujar() {
   ctx.clearRect(0, 0, cv.width, cv.height);
+  const visibles = M.visibleAhora(s);
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
-    const ch = s.mapa[y][x];
-    let color = M.FILAS_MOVILES.has(y) ? css("--movil") : css("--corredor");
+    const ch = s.conocido[y][x];
+    if (ch === "?") {
+      ctx.fillStyle = css("--niebla");
+      ctx.fillRect(x * TAM, y * TAM, TAM, TAM);
+      continue;
+    }
+    let color = css("--corredor");
     if (ch === "#") color = css("--pared");
     else if (ch === "C") color = css("--ciudad");
-    else if (ch === "S") color = s.marcas >= M.MARCAS_PARA_SALIR ? css("--salida") : css("--suave");
+    else if (ch === "S") color = css("--salida");
     else if (ch === "M") color = css("--escombros");
     else if (ch === "K") color = css("--marca");
+    const visible = visibles.has(y * N + x);
+    const viejo = !visible && s.vistoEn[y][x] < s.giro;   // visto antes del último giro: puede haber cambiado
+    ctx.globalAlpha = visible ? 1 : viejo ? .45 : .8;
     ctx.fillStyle = color;
     ctx.fillRect(x * TAM, y * TAM, TAM, TAM);
     ctx.strokeStyle = css("--borde");
@@ -189,19 +198,13 @@ function dibujar() {
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.fillText(ch, x * TAM + TAM / 2, y * TAM + TAM / 2 + 1);
     }
-  }
-  // flechas de giro
-  ctx.fillStyle = css("--suave");
-  ctx.font = `${TAM * .55}px Georgia`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  for (const y of M.FILAS_MOVILES) {
-    const der = y < 7;
-    ctx.fillText(der ? "›" : "‹", (der ? N - 1 : 0) * TAM + TAM / 2, y * TAM + TAM / 2);
+    ctx.globalAlpha = 1;
   }
   // ruta prevista
   const c = seleccion !== null ? s.corredores[seleccion] : null;
   const destino = pendiente || (c && c.destino);
   if (c && destino && (c.estado === "fuera" || c.estado === "ciudad")) {
-    const ruta = M.camino(s.mapa, c, destino, c.atajo ? 1 : 0);
+    const ruta = M.camino(M.mapaPlan(s), c, destino, c.atajo ? 1 : 0);
     if (ruta) {
       ctx.strokeStyle = css("--acento"); ctx.lineWidth = 3; ctx.setLineDash([6, 5]);
       ctx.beginPath(); ctx.moveTo(c.x * TAM + TAM / 2, c.y * TAM + TAM / 2);
@@ -236,8 +239,10 @@ function render() {
   $("btnVel").textContent = `×${velocidadJuego}`;
   $("comida").textContent = s.comida;
   const se = $("salidaEstado");
-  const abierta = s.marcas >= M.MARCAS_PARA_SALIR;
-  se.textContent = abierta ? "Salida abierta. Lleva un corredor hasta la S." : `Salida sellada: ${s.marcas} de ${M.MARCAS_PARA_SALIR} marcas leídas. Busca las K.`;
+  const abierta = s.salidaConocida;
+  let sp = null;
+  if (abierta) for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) if (s.conocido[y][x] === "S") sp = { x, y };
+  se.textContent = abierta ? `Salida en ${sp ? M.coord(sp) : "?"}. Lleva un corredor hasta la S.` : `Salida desconocida: ${s.marcas} de ${M.MARCAS_PARA_SALIR} marcas leídas. Explora y busca las K.`;
   se.className = "salida-estado" + (abierta ? " abierta" : "");
   $("comidaNota").textContent = `comida · +${M.produccion(s) - M.CONSUMO} cada ${M.TICK_ECONOMIA} s`;
   $("materiales").textContent = s.materiales;
@@ -275,7 +280,7 @@ function render() {
     if (est && raciones === null) raciones = est.raciones;
     const r = raciones ?? 4;
     $("pista").textContent = pendiente
-      ? (est ? `Hasta ${M.coord(pendiente)}: ${est.ida} celdas de ida y ${est.vuelta ?? "?"} de vuelta, unos ${est.ticks} s en total. Recomendado: ${est.raciones} raciones, una de margen por si el laberinto gira.` : `No hay camino hasta ${M.coord(pendiente)} con el laberinto así.`)
+      ? (est ? `Hasta ${M.coord(pendiente)}: ${est.ida} celdas de ida y ${est.vuelta ?? "?"} de vuelta, unos ${est.ticks} s en total. Recomendado: ${est.raciones} raciones, una de margen por si el laberinto gira.${s.conocido[pendiente.y][pendiente.x] === "?" ? " El camino cruza zona sin explorar: puede haber paredes." : ""}` : `No hay camino hasta ${M.coord(pendiente)} con lo que se sabe del laberinto.`)
       : `${c.nombre} está en la ciudad. Toca una celda para elegir destino.`;
     const faltaComida = s.comida < r;
     a.innerHTML = `<div class="fila">
@@ -317,7 +322,7 @@ cv.addEventListener("click", (ev) => {
   if (sobre && seleccion === null) return seleccionar(sobre.id);
   const c = seleccion !== null ? s.corredores[seleccion] : null;
   if (!c) { if (sobre) seleccionar(sobre.id); return; }
-  if (!M.pasable(s.mapa, x, y)) return;
+  if (s.conocido[y][x] === "#" || M.esCiudad(x, y)) return;
   if (c.estado === "ciudad") { pendiente = { x, y }; raciones = null; }
   else if (c.estado === "fuera") s = M.cambiarDestino(s, c.id, { x, y });
   render();
