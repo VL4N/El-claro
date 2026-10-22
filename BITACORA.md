@@ -8,6 +8,23 @@ Seguimiento vivo en GitHub: [issues por fase](../../issues?q=label%3Aseguimiento
 
 ---
 
+## 2026-10-22 · Sesión 15: el autor descubre una regla
+
+**Hecho**
+
+- El autor jugó con niebla, historial, marcas que hablan, sala de mapas por hipótesis y dificultad automática. Respuesta: **"sí descubrí una regla"**.
+
+**Decidido**
+
+- **La puerta de la fase 2 pasa para el autor.** La pregunta completa es sobre un jugador nuevo, así que la fase no se cierra todavía: falta probar con al menos tres personas que no conozcan el juego. Pero la mecánica central ("el laberinto se aprende") quedó validada por quien más partidas lleva, y ya no se toca hasta tener esas pruebas.
+
+**Siguiente**
+
+- Pruebas con tres personas nuevas. Lo que hay que anotar de cada una: si descubrió alguna regla, cuál, con qué herramienta, y en qué minuto.
+- Mientras tanto, preparar la fase 3 ("cada persona cuenta") o la fase 1b (vista isométrica), según prefiera el autor.
+
+---
+
 ## 2026-10-22 · Sesión 14: la sala de mapas responde hipótesis
 
 **Hecho**
